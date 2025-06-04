@@ -1,0 +1,30 @@
+server:
+  port: 8002
+
+spring:
+  datasource:
+    username: root
+    password: hdstartY@123@
+    url: jdbc:mysql://47.109.93.230:3306/cloud_nas_member?useUnicode=true&characterEncoding=utf-8&serverTimezone=UTC
+    driver-class-name: com.mysql.cj.jdbc.Driver
+#  application:
+#    name: cloud-nas-member
+#  cloud:
+#    nacos:
+#      discovery:
+#        server-addr: 127.0.0.1:8848
+logging:
+  level:
+    com.baomidou.mybatisplus: debug
+    org.hdstart.cloud.mapper: debug # 替换为你项目中 mapper 所在的包
+
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 120MB
+
+minio:
+  endpoint: http://47.109.93.230:9000        # MinIO 服务地址（换成你的服务器IP）
+  accessKey: hdstartY                       # 你设置的账号
+  secretKey: Ctbu@909703@                   # 你设置的密码
+  bucketName: cloud-nas
