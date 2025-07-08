@@ -2,23 +2,30 @@ package org.hdstart.cloud.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import jakarta.validation.Valid;
+import lombok.extern.slf4j.Slf4j;
 import org.hdstart.cloud.dto.BlogFile;
+import org.hdstart.cloud.dto.MemberDTO;
 import org.hdstart.cloud.entity.Member;
 import org.hdstart.cloud.entity.OtherMemberInfo;
+import org.hdstart.cloud.esmapper.ESMemberInfoMapper;
 import org.hdstart.cloud.result.RE;
 import org.hdstart.cloud.result.Result;
 import org.hdstart.cloud.service.MemberService;
 import org.hdstart.cloud.service.OtherMemberInfoService;
 import org.hdstart.cloud.utils.JwtUtils;
 import org.hdstart.cloud.utils.minio.utils.MinioUtils;
+import org.hdstart.cloud.vo.ESMemberInfo;
 import org.hdstart.cloud.vo.PublisherInfoVo;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.HashMap;
 import java.util.List;
 
+@Slf4j
 @RestController
 @RequestMapping("/member/")
 public class MemberController {
@@ -29,17 +36,50 @@ public class MemberController {
     @Autowired
     private OtherMemberInfoService otherMemberInfoService;
 
+    @Autowired
+    private StringRedisTemplate stringRedisTemplate;
+
+//    @Autowired
+//    private ESMemberInfoMapper esMemberInfoMapper;
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
 
     @PostMapping("loginByPhone")
     public Result LoginByPhone (@RequestBody Member member) {
-        if (member.getPhone().isEmpty()) {
+        if (member.getPhone().isEmpty() || member.getPassword().isEmpty()) {
             return Result.error(RE.USER_PHONE_EMPTY);
         }
         Member storeMember = memberService.getOne(new QueryWrapper<Member>().eq("phone", member.getPhone()));
         if (storeMember == null) {
             return Result.error(RE.USER_NOT_FOUND);
         }
-        if (!storeMember.getPassword().equals(member.getPassword())) {
+
+        if (!passwordEncoder.matches(member.getPassword(),storeMember.getPassword())) {
+            return Result.error(RE.USER_PASSWORD_ERROR);
+        }
+
+        String token = JwtUtils.generateToken(storeMember.getId().toString(), storeMember.getPhone());
+        HashMap<String, String> result = new HashMap<>();
+        result.put("token", token);
+        result.put("id",storeMember.getId().toString());
+        result.put("avatarUrl",storeMember.getAvatar());
+        result.put("nickName",storeMember.getNickName());
+        stringRedisTemplate.opsForHash().put("tokens",storeMember.getId().toString(),token);
+        return Result.build(RE.USER_LOGIN_SUCCESS,result);
+    }
+
+    @PostMapping("loginByEmail")
+    public Result LoginByEmail (@RequestBody Member member) {
+        if (member.getEmail().isEmpty() || member.getPassword().isEmpty()) {
+            return Result.error(RE.USER_EMAIL_EMPTY);
+        }
+        Member storeMember = memberService.getOne(new QueryWrapper<Member>().eq("email", member.getEmail()));
+        if (storeMember == null) {
+            return Result.error(RE.USER_NOT_FOUND);
+        }
+        if (!passwordEncoder.matches(member.getPassword(),storeMember.getPassword())) {
             return Result.error(RE.USER_PASSWORD_ERROR);
         }
         String token = JwtUtils.generateToken(storeMember.getId().toString(), storeMember.getPhone());
@@ -48,26 +88,7 @@ public class MemberController {
         result.put("id",storeMember.getId().toString());
         result.put("avatarUrl",storeMember.getAvatar());
         result.put("nickName",storeMember.getNickName());
-        return Result.build(RE.USER_LOGIN_SUCCESS,result);
-    }
-
-    @PostMapping("loginByEmail")
-    public Result LoginByEmail (@RequestBody Member member) {
-        if (member.getEmail().isEmpty()) {
-            return Result.error(RE.USER_EMAIL_EMPTY);
-        }
-        Member storeMember = memberService.getOne(new QueryWrapper<Member>().eq("email", member.getEmail()));
-        if (storeMember == null) {
-            return Result.error(RE.USER_NOT_FOUND);
-        }
-        if (!storeMember.getPassword().equals(member.getPassword())) {
-            return Result.error(RE.USER_PASSWORD_ERROR);
-        }
-        String token = JwtUtils.generateToken(storeMember.getId().toString(), storeMember.getPhone());
-        HashMap<String, String> result = new HashMap<>();
-        result.put("token", token);
-        result.put("id",storeMember.getId().toString());
-        result.put("avatarUrl",storeMember.getAvatar());
+        stringRedisTemplate.opsForHash().put("tokens",storeMember.getId().toString(),token);
         return Result.build(RE.USER_LOGIN_SUCCESS,result);
     }
 
@@ -79,19 +100,31 @@ public class MemberController {
 
     @PostMapping("saveMember")
     public Result saveMember (@Valid @RequestBody Member member) {
-        Member storeMemberByPhone = memberService.getOne(new QueryWrapper<Member>().eq("phone", member.getPhone()));
-        if (storeMemberByPhone == null) {
-            Member storeMemberByEmail = memberService.getOne(new QueryWrapper<Member>().eq("email", member.getEmail()));
-            if (storeMemberByEmail != null) {
-                return Result.error(RE.USER_REGISTER_FAILD);
-            }
-        } else {
+        // 重复校验
+        if (memberService.exists(new QueryWrapper<Member>().eq("phone", member.getPhone())) ||
+                memberService.exists(new QueryWrapper<Member>().eq("email", member.getEmail()))) {
             return Result.error(RE.USER_REGISTER_FAILD);
         }
+        //加密密码
+        String encodePassword = passwordEncoder.encode(member.getPassword());
+        member.setPassword(encodePassword);
+        // 保存用户
         boolean isSuccess = memberService.save(member);
-        Integer id = memberService.getOne(new QueryWrapper<Member>().eq("phone", member.getPhone())).getId();
+        if (!isSuccess) {
+            return Result.error(RE.USER_REGISTER_FAILD);
+        }
+        //保存es
+        ESMemberInfo esMemberInfo = new ESMemberInfo();
+        esMemberInfo.setId(member.getId().toString());
+        esMemberInfo.setNickName(member.getNickName());
+//        try {
+//            esMemberInfoMapper.save(esMemberInfo);
+//        } catch (Exception e) {
+//            log.error("用户信息写入ES失败: " + e.getMessage());
+//        }
+        //其他数据
         OtherMemberInfo otherMemberInfo = new OtherMemberInfo();
-        otherMemberInfo.setMemberId(id);
+        otherMemberInfo.setMemberId(member.getId());
         otherMemberInfoService.save(otherMemberInfo);
         return Result.success(isSuccess);
     }
@@ -136,5 +169,18 @@ public class MemberController {
     public Result getPublisherInfo (@RequestParam("memberId") Integer memberId) {
        PublisherInfoVo publisherInfoVo =  memberService.getPublisherInfo(memberId);
        return Result.success(publisherInfoVo);
+    }
+
+    @GetMapping("getMemberInfo/{id}")
+    public MemberDTO getMemberInfo (@PathVariable("id") Integer id) {
+        MemberDTO memberDTO = memberService.getMemberInfo(id);
+        return memberDTO;
+    }
+
+    @GetMapping("getMemberNickName")
+    public String getMemberNickName(@RequestParam("memberId") Integer id) {
+
+        String nickName = memberService.getMemberNickName(id);
+        return nickName;
     }
 }

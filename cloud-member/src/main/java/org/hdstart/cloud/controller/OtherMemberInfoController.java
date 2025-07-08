@@ -19,7 +19,7 @@ public class OtherMemberInfoController {
 
     @PostMapping("changeOtherInfo")
     public Result changeOtherInfo(@RequestBody OtherInfoVo otherInfoVo) {
-        Boolean isSuccess = otherMemberInfoService.updateOtherInfo(otherInfoVo);
-        return Result.success(isSuccess);
+        Result isSuccess = otherMemberInfoService.updateOtherInfo(otherInfoVo);
+        return isSuccess;
     }
 }

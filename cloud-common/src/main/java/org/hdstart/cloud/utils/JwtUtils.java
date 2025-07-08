@@ -15,7 +15,7 @@ public class JwtUtils {
     //TODO 密钥（建议从配置文件读取，避免硬编码）
     private static final String SECRET = "AJNDJHSJKNSJDKJfhjkshfnkdjfhdjkfj";
     // 过期时间（单位：毫秒，默认1天）
-    private static final long EXPIRATION = 1000 * 60 * 60 * 24;
+    private static final long EXPIRATION = 1000 * 60 * 60;
 
     // 生成Token
     public static String generateToken(String userId, String username) {

@@ -1,6 +1,5 @@
 package org.hdstart.cloud.controller;
 
-import org.apache.catalina.LifecycleState;
 import org.hdstart.cloud.entity.LeaveMessage;
 import org.hdstart.cloud.result.Result;
 import org.hdstart.cloud.service.LeaveMessageService;

@@ -6,6 +6,8 @@ public enum RE {
     ERROR(500,"error"),
     USER_NOT_FOUND(401,"没有此用户"),
     USER_NOT_LOGIN(401,"用户未登录"),
+    USER_LOGIN_TIME_OUT(401,"登录已过期"),
+    USER_LOGIN_OTHER_PLACE(401,"账号在其他地方登录"),
     TEACHER_ADD_FAILD(401,"用户添加失败"),
     USER_REGISTER_FAILD(401,"用户注册失败,该用户已存在"),
     USER_PHONE_EMPTY(401,"登录手机号不能为空"),

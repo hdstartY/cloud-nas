@@ -58,9 +58,6 @@
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
-                <configuration>
-                    <mainClass>com.example.YourMainApp</mainClass>
-                </configuration>
                 <executions>
                     <execution>
                         <goals>

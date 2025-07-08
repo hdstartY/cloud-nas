@@ -15,3 +15,58 @@ buildNumber.properties
 .project
 # JDT-specific (Eclipse Java Development Tools)
 .classpath
+
+# 编译输出
+/target/
+!/src/main/resources/static/           # 保留静态资源
+!/src/main/resources/templates/        # 保留模板文件
+
+# 日志文件
+*.log
+logs/
+
+# 环境配置（本地）
+*.env
+.env.local
+application-*.yml
+application-*.properties
+
+# 操作系统
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# VS Code
+.vscode/
+
+# 包管理器临时文件
+.mvn/
+!/.mvn/wrapper/maven-wrapper.jar
+
+# JVM 临时文件
+*.class
+*.jar
+*.war
+*.ear
+hs_err_pid*
+
+# Lombok 自动生成代码缓存
+lombok.config
+
+# 测试报告/覆盖率
+/test-output/
+/coverage/
+jacoco.exec
+
+# 文件上传临时目录
+upload/
+
+# 自定义忽略（如数据库文件、临时文件等）
+*.db
+*.bak
+*.tmp
