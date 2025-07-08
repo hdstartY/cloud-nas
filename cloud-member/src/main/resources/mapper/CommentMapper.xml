@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.hdstart.cloud.mapper.CommentMapper">
+
+    <resultMap id="BaseResultMap" type="org.hdstart.cloud.entity.Comment">
+            <id property="id" column="id" jdbcType="INTEGER"/>
+            <result property="memberId" column="member_id" jdbcType="INTEGER"/>
+            <result property="textContent" column="content" jdbcType="VARCHAR"/>
+            <result property="likeNum" column="like" jdbcType="INTEGER"/>
+            <result property="createTime" column="create_time" jdbcType="DATE"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id,member_id,content,
+        like,create_time
+    </sql>
+    <delete id="deleteBatchBlogIds">
+        delete from comment
+        where blog_id in
+        <foreach collection="blogIds" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+    <select id="listCWithMBatchBlogIds" resultType="org.hdstart.cloud.vo.ShowCommentVo">
+        SELECT c.id,c.member_id as memberId,nick_name as commentNickName,avatar,c.blog_id as blogId,text_content as textContent,like_num as likeNum,c.create_time as createTime
+        FROM `comment` c LEFT JOIN `member` m ON c.member_id = m.id
+        WHERE c.blog_id IN
+        <foreach collection="blogIds" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+        LIMIT #{pageSize} OFFSET #{currentPage}
+    </select>
+    <select id="listCommentCountByBlogIds" resultType="org.hdstart.cloud.vo.BlogCommentCountVo">
+        SELECT blog_id as blogId,COUNT(blog_id) as `count`
+        FROM `comment`
+        GROUP BY blog_id
+        HAVING blog_id IN
+        <foreach collection="voBlogIds" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </select>
+    <select id="listCWithMBatchBlogIdsF" resultType="org.hdstart.cloud.vo.ShowCommentVo">
+        SELECT *
+        FROM (
+        SELECT c.id,
+        c.member_id AS memberId,
+        m.nick_name AS commentNickName,
+        m.avatar,
+        c.blog_id AS blogId,
+        c.text_content AS textContent,
+        c.like_num AS likeNum,
+        c.create_time AS createTime,
+        ROW_NUMBER() OVER (PARTITION BY c.blog_id ORDER BY c.create_time DESC) AS rn
+        FROM comment c
+        LEFT JOIN member m ON c.member_id = m.id
+        WHERE c.blog_id IN
+        <foreach collection="voBlogIds" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+        ) AS t
+        WHERE t.rn &lt;= 5
+    </select>
+
+
+</mapper>

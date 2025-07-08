@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.hdstart.cloud.mapper.MemberMapper">
+
+    <resultMap id="BaseResultMap" type="org.hdstart.cloud.entity.Member">
+            <id property="id" column="id" jdbcType="INTEGER"/>
+            <result property="nickName" column="nick_name" jdbcType="VARCHAR"/>
+            <result property="phone" column="phone" jdbcType="VARCHAR"/>
+            <result property="email" column="email" jdbcType="VARCHAR"/>
+            <result property="password" column="password" jdbcType="VARCHAR"/>
+            <result property="createTime" column="create_time" jdbcType="DATE"/>
+            <result property="isDeleted" column="is_deleted" jdbcType="INTEGER"/>
+            <result property="avatar" column="avatar_url" jdbcType="VARCHAR"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id,nick_name,phone,
+        email,password,create_time,
+        is_deleted,avatar_url
+    </sql>
+    <select id="getMemberInfo" resultType="org.hdstart.cloud.dto.MemberDTO">
+        select id,nick_name as nickName,avatar
+        from member
+        where id = #{id}
+    </select>
+    <select id="getMemberNickName" resultType="java.lang.String">
+        select nick_name as nickName
+        from member
+        where id = #{id}
+    </select>
+</mapper>

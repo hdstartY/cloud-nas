@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.hdstart.cloud.mapper.PointMessageMapper">
+
+    <resultMap id="BaseResultMap" type="org.hdstart.cloud.entity.PointMessage">
+            <id property="id" column="id" jdbcType="INTEGER"/>
+            <result property="sendId" column="send_id" jdbcType="INTEGER"/>
+            <result property="recieveId" column="recieve_id" jdbcType="INTEGER"/>
+            <result property="textContent" column="text_content" jdbcType="VARCHAR"/>
+            <result property="isRead" column="is_read" jdbcType="INTEGER"/>
+            <result property="createTime" column="create_time" jdbcType="TIMESTAMP"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id,send_id,recieve_id,
+        text_content,is_read,create_time
+    </sql>
+    <update id="setReadStatus">
+        update point_message
+        set is_read = 1
+        where id in
+        <foreach collection="ids" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </update>
+    <select id="getNewNumByMemberId" resultType="org.hdstart.cloud.vo.PointMessageVo">
+        SELECT send_id as memberId, COUNT(recieve_id) as newsNum
+        FROM point_message
+        GROUP BY send_id,recieve_id,is_read
+        HAVING recieve_id = #{memberId} and is_read = 0
+    </select>
+    <select id="getHistory" resultType="org.hdstart.cloud.vo.HistoryPointMessageVo">
+        select id,send_id as sendId,recieve_id as receiveId,text_content as message,is_read as isRead
+        from point_message
+        where send_id = #{sendId} and recieve_id = #{receiveId} or send_id = #{receiveId} and recieve_id = #{sendId}
+        order by create_time desc
+        limit 20 offset #{currentPage}
+    </select>
+    <select id="selectRecently" resultType="java.lang.Integer">
+        SELECT send_id
+        FROM point_message
+        GROUP BY send_id,recieve_id
+        HAVING recieve_id = #{memberId}
+    </select>
+</mapper>

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.hdstart.cloud.mapper.BlogReportMapper">
+
+    <resultMap id="BaseResultMap" type="org.hdstart.cloud.entity.BlogReport">
+            <id property="id" column="id" jdbcType="INTEGER"/>
+            <result property="blogId" column="blog_id" jdbcType="INTEGER"/>
+            <result property="memberId" column="member_id" jdbcType="INTEGER"/>
+            <result property="reportContent" column="report_content" jdbcType="VARCHAR"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id,blog_id,member_id,
+        report_content
+    </sql>
+</mapper>

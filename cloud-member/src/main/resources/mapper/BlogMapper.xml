@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.hdstart.cloud.mapper.BlogMapper">
+
+    <resultMap id="BaseResultMap" type="org.hdstart.cloud.entity.Blog">
+            <id property="id" column="id" jdbcType="INTEGER"/>
+            <result property="memberId" column="member_id" jdbcType="INTEGER"/>
+            <result property="textContent" column="text_content" jdbcType="VARCHAR"/>
+            <result property="likeNum" column="like" jdbcType="INTEGER"/>
+            <result property="createTime" column="create_time" jdbcType="DATE"/>
+            <result property="isPublic" column="is_public" jdbcType="INTEGER"/>
+            <result property="isDeleted" column="is_deleted" jdbcType="INTEGER"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id,member_id,text_content,
+        img_url,like,conment_id,
+        create_time,is_public,is_deleted
+    </sql>
+    <update id="resumeByIds">
+        update blog
+        set is_deleted = 0
+        where id in
+        <foreach collection="blogIds" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </update>
+    <update id="removeByIdWithTime">
+        update blog
+        set is_deleted = 1,deleted_time = #{deletedTime}
+        where id = #{blogId}
+    </update>
+
+    <delete id="removePByIds">
+        DELETE FROM blog
+        WHERE id IN
+        <foreach collection="blogIds" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+    <select id="selectBlogVoByMemberId" resultType="org.hdstart.cloud.vo.ShowBlogVo">
+        SELECT b.`id`,b.`member_id` as memberId,avatar,text_content as textContent,like_num as likeNum,nick_name as nickName,b.`create_time` as createTime,is_public as isPublic,b.is_deleted as isDeleted
+        FROM blog b LEFT JOIN `member` m ON b.member_id = m.id
+        where m.id = #{memberId} and b.is_deleted = 0
+        order by b.create_time DESC
+        LIMIT #{pageSize} OFFSET #{currentPage}
+    </select>
+    <select id="listBlogWithMember" resultType="org.hdstart.cloud.vo.ShowBlogVo">
+        SELECT b.`id`,b.`member_id` as memberId,avatar,text_content as textContent,like_num as likeNum,nick_name as nickName,b.`create_time` as createTime,is_public as isPublic,b.is_deleted as isDeleted
+        FROM blog b LEFT JOIN `member` m ON b.member_id = m.id
+        WHERE b.create_time between #{sevenDaysAgo} and #{now} and b.is_deleted = 0 and b.is_public = 1
+        ORDER BY b.create_time DESC
+        LIMIT #{pageSize} OFFSET #{currentPage}
+    </select>
+    <select id="listByMemberIds" resultType="org.hdstart.cloud.vo.ShowBlogVo">
+        SELECT b.`id`,b.`member_id` as memberId,avatar,text_content as textContent,like_num as likeNum,nick_name as nickName,b.`create_time` as createTime,is_public as isPublic,b.is_deleted as isDeleted
+        FROM blog b LEFT JOIN `member` m ON b.member_id = m.id
+        WHERE b.member_id IN
+        <foreach collection="followedIds" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+        AND b.is_deleted = 0
+        ORDER BY ${orderType} DESC
+        LIMIT #{pageSize} OFFSET #{currentPage}
+    </select>
+    <select id="listRecoverBlogs" resultType="org.hdstart.cloud.vo.RecoverBlogVo">
+        select b.id,avatar,m.nick_name as nickName,b.text_content as textContent,b.create_time as createTime
+        from blog b left join member m on b.member_id = m.id
+        where b.member_id = #{memberId} and b.is_deleted = 1 and b.deleted_time BETWEEN #{frontTime} AND #{now}
+        <if test="timeOrderType != null and timeOrderType == 'desc'">
+            ORDER BY b.deleted_time DESC
+        </if>
+        <if test="timeOrderType != null and timeOrderType == 'asc'">
+            ORDER BY b.deleted_time ASC
+        </if>
+        limit #{pageSize} offset #{currentPage}
+    </select>
+    <select id="listBlog" resultType="org.hdstart.cloud.vo.CheckContentVo">
+        select id,member_id as memberId,text_content as textContent
+        from blog
+        where is_deleted = 0 and is_public = 2
+        limit #{pageSize} offset #{currentPage}
+    </select>
+    <select id="listBlogCache" resultType="org.hdstart.cloud.vo.ShowBlogVo">
+        SELECT b.`id`,b.`member_id` as memberId,avatar,text_content as textContent,like_num as likeNum,nick_name as nickName,b.`create_time` as createTime,is_public as isPublic,b.is_deleted as isDeleted
+        FROM blog b LEFT JOIN `member` m ON b.member_id = m.id
+        WHERE b.create_time between #{sevenDaysAgo} and #{now} and b.is_deleted = 0 and b.is_public = 1
+        order by b.like_num DESC
+        LIMIT #{pageSize} OFFSET #{currentPage}
+    </select>
+
+</mapper>

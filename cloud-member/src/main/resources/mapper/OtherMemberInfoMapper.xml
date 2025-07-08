@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.hdstart.cloud.mapper.OtherMemberInfoMapper">
+
+    <resultMap id="BaseResultMap" type="org.hdstart.cloud.entity.OtherMemberInfo">
+            <id property="id" column="id" jdbcType="INTEGER"/>
+            <result property="memberId" column="member_id" jdbcType="INTEGER"/>
+            <result property="backImg" column="back_img" jdbcType="VARCHAR"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id,member_id,back_img,
+        signature,other
+    </sql>
+    <insert id="insertOrUpdate">
+        INSERT INTO other_member_info (member_id,back_img)
+        VALUES (#{otherMemberInfo.memberId}, #{otherMemberInfo.backImg})
+        ON DUPLICATE KEY UPDATE
+             back_img = VALUES(back_img)
+    </insert>
+</mapper>

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.hdstart.cloud.mapper.MemberFollowMapper">
+
+    <resultMap id="BaseResultMap" type="org.hdstart.cloud.entity.MemberFollow">
+            <id property="id" column="id" jdbcType="INTEGER"/>
+            <result property="followedId" column="followed_id" jdbcType="INTEGER"/>
+            <result property="followerId" column="follower_id" jdbcType="INTEGER"/>
+            <result property="createTime" column="create_time" jdbcType="DATE"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id,followed_id,follower_id,
+        create_time
+    </sql>
+    <select id="getFollowedMembersIds" resultType="java.lang.Integer">
+        select followed_id
+        from member_follow
+        where follower_id = #{followerId}
+    </select>
+</mapper>
