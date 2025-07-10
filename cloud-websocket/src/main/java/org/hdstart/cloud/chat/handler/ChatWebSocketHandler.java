@@ -1,7 +1,9 @@
 package org.hdstart.cloud.chat.handler;
 
+import com.alibaba.fastjson2.JSON;
 import lombok.extern.slf4j.Slf4j;
 import org.hdstart.cloud.chat.feign.MemberFeignClient;
+import org.hdstart.cloud.chat.vo.MsgVo;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.TextMessage;
@@ -53,43 +55,32 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
 
         log.info("接收到：" + message.getPayload());
         //拿到被发送人的的memberId和信息
-        String json = message.getPayload();
-        String[] split = json.split(":");
-        String sendMemberId = split[0];
-        String receiveMemberId = split[1];
-        String sendMessage = message.getPayload();
-        String returnMessage = memberIdMapNickName.get(sendMemberId) + ":" + sendMessage;
+        MsgVo msgVo = JSON.parseObject(message.getPayload(), MsgVo.class);
 
-        if (sendMemberId == null || receiveMemberId == null) {
+        if (msgVo.getSendId() == null || msgVo.getReceiveId() == null) {
             log.info("接收者或发送者信息不足，停止发送");
             return;
         }
 
+        String sendNickName = memberIdMapNickName.get(msgVo.getSendId().toString());
+        msgVo.setSendNickName(sendNickName);
         //拿到被发送人的sessionId
-        String toSessionId = memberIdMapSessionId.get(receiveMemberId);
+        String toSessionId = memberIdMapSessionId.get(msgVo.getReceiveId().toString());
         if (toSessionId != null) {
             WebSocketSession toSession = sessions.get(toSessionId);
             if (toSession != null && toSession.isOpen()) {
                 try {
-                    memberFeignClient.storeMessage(Integer.valueOf(sendMemberId),Integer.valueOf(receiveMemberId),split[2],1);
-                    pointSendMessage(returnMessage,toSession);
+                    pointSendMessage(message.getPayload(),toSession);
                     log.info("发送成功");
                 } catch (Exception e) {
-                    log.info("发送或持久化消息失败");
-                }
-            } else {
-                try {
-                    memberFeignClient.storeMessage(Integer.valueOf(sendMemberId),Integer.valueOf(receiveMemberId),split[2],0);
-                } catch (Exception e) {
-                    log.info("持久化消息失败");
+                    log.info("发送消息失败");
                 }
             }
-        } else {
-            try {
-                memberFeignClient.storeMessage(Integer.valueOf(sendMemberId),Integer.valueOf(receiveMemberId),split[2],0);
-            } catch (Exception e) {
-                log.info("持久化消息失败");
-            }
+        }
+        try {
+            memberFeignClient.storeMessage(msgVo.getSendId(),msgVo.getReceiveId(),msgVo.getMessage(),0,msgVo.getStatus());
+        } catch (Exception e) {
+            log.info("持久化消息失败");
         }
     }
 

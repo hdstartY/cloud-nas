@@ -20,4 +20,10 @@
         from member_follow
         where follower_id = #{followerId}
     </select>
+    <select id="getFollowing" resultType="org.hdstart.cloud.vo.FollowingMemberVo">
+        SELECT f.followed_id AS memberId,nick_name AS nickName,avatar
+        FROM member_follow f LEFT JOIN `member` m ON f.followed_id = m.id
+        WHERE f.follower_id = #{memberId}
+        LIMIT #{pageSize} OFFSET #{currentPage}
+    </select>
 </mapper>

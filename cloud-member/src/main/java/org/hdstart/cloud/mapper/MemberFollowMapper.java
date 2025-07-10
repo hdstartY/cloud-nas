@@ -3,6 +3,7 @@ package org.hdstart.cloud.mapper;
 import org.apache.ibatis.annotations.Param;
 import org.hdstart.cloud.entity.MemberFollow;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import org.hdstart.cloud.vo.FollowingMemberVo;
 
 import java.util.List;
 
@@ -15,6 +16,8 @@ import java.util.List;
 public interface MemberFollowMapper extends BaseMapper<MemberFollow> {
 
     List<Integer> getFollowedMembersIds(@Param("followerId") Integer followerId);
+
+    List<FollowingMemberVo> getFollowing(@Param("memberId") Integer memberId, @Param("currentPage") Integer currentPage, @Param("pageSize") Integer pageSize);
 }
 
 

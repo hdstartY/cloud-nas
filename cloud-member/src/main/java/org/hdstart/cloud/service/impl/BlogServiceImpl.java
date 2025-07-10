@@ -434,7 +434,7 @@ public class BlogServiceImpl extends ServiceImpl<BlogMapper, Blog>
         long startTime = System.currentTimeMillis();
 
         LocalDateTime now = LocalDateTime.now();
-        LocalDateTime sevenDaysAgo = now.minusDays(7);
+        LocalDateTime sevenDaysAgo = now.minusDays(30);
 
         //1.查询基础博客
         List<ShowBlogVo> vos = blogMapper.listBlogCache((currentPage - 1) * pageSize,pageSize,now,sevenDaysAgo);

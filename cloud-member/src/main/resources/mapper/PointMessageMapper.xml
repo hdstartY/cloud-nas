@@ -25,6 +25,11 @@
             #{id}
         </foreach>
     </update>
+    <delete id="cleanChatHistory">
+        delete
+        from point_message
+        where create_time &lt; #{sevenDayAgo}
+    </delete>
     <select id="getNewNumByMemberId" resultType="org.hdstart.cloud.vo.PointMessageVo">
         SELECT send_id as memberId, COUNT(recieve_id) as newsNum
         FROM point_message
@@ -32,7 +37,7 @@
         HAVING recieve_id = #{memberId} and is_read = 0
     </select>
     <select id="getHistory" resultType="org.hdstart.cloud.vo.HistoryPointMessageVo">
-        select id,send_id as sendId,recieve_id as receiveId,text_content as message,is_read as isRead
+        select id,send_id as sendId,recieve_id as receiveId,text_content as message,is_read as isRead,status as status
         from point_message
         where send_id = #{sendId} and recieve_id = #{receiveId} or send_id = #{receiveId} and recieve_id = #{sendId}
         order by create_time desc

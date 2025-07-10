@@ -4,8 +4,10 @@ import com.alibaba.fastjson2.JSON;
 import lombok.extern.slf4j.Slf4j;
 import org.hdstart.cloud.entity.Blog;
 import org.hdstart.cloud.entity.BlogLike;
+import org.hdstart.cloud.mapper.PointMessageMapper;
 import org.hdstart.cloud.service.BlogLikeService;
 import org.hdstart.cloud.service.BlogService;
+import org.hdstart.cloud.service.PointMessageService;
 import org.hdstart.cloud.service.impl.BlogServiceImpl;
 import org.hdstart.cloud.vo.ShowBlogVo;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,13 +33,16 @@ public class CacheBlogTask {
     @Autowired
     private BlogLikeService blogLikeService;
 
+    @Autowired
+    private PointMessageService pointMessageService;
+
     private static final String HOT_BLOG_CACHE_KEY = "hot:blog:page";
 
     @Scheduled(fixedRate = 30 * 60 * 1000) // 每30分钟执行一次
     public void refreshHotBlogCache() {
         log.error("执行数据预热");
         int pages = 5;
-        int pageSize = 10;
+        int pageSize = 20;
 
         for (int currentPage = 1; currentPage <= pages; currentPage++) {
             List<ShowBlogVo> showBlogVos = blogService.listShowBlogsCache(currentPage, pageSize);
@@ -70,6 +75,20 @@ public class CacheBlogTask {
                 blogService.updateById(blog);
             });
             log.info("点赞列表同步完成");
+        }
+    }
+
+    @Scheduled(cron = "0 0 0 * * ?")
+    public void cleanChatHistory() {
+        log.warn("删除七天前的聊天记录...");
+        log.warn("删除文本内容...");
+        Boolean text = pointMessageService.cleanChatHistory();
+        log.warn("删除图片内容...");
+        Boolean img = pointMessageService.cleanChatImg();
+        if (text) {
+            log.info("聊天记录清理完成...");
+        } else {
+            log.error("聊天记录清理失败...");
         }
     }
 }

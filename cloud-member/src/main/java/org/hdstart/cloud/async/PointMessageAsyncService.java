@@ -1,7 +1,9 @@
 package org.hdstart.cloud.async;
 
 import lombok.extern.slf4j.Slf4j;
+import org.hdstart.cloud.entity.MsgImg;
 import org.hdstart.cloud.mapper.PointMessageMapper;
+import org.hdstart.cloud.service.MsgImgService;
 import org.hdstart.cloud.vo.HistoryPointMessageVo;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Async;
@@ -16,6 +18,9 @@ public class PointMessageAsyncService {
 
     @Autowired
     private PointMessageMapper pointMessageMapper;
+
+    @Autowired
+    private MsgImgService msgImgService;
 
     @Async
     public void setMessageIsRead(List<HistoryPointMessageVo> vos) {
@@ -33,5 +38,23 @@ public class PointMessageAsyncService {
         }
         pointMessageMapper.setReadStatus(ids);
         log.info("消息状态设置完毕");
+    }
+
+    @Async
+    public void saveMsgImgName (List<String> objectNames) {
+        log.info("开始同步聊天图片到数据库");
+        if (objectNames == null || objectNames.isEmpty()) {
+            log.info("聊天列表为空，停止同步");
+            return;
+        }
+        List<MsgImg> msgImgs = objectNames.stream().map(item -> {
+            MsgImg msgImg = new MsgImg();
+            msgImg.setImgUrl(item);
+            return msgImg;
+        }).collect(Collectors.toList());
+
+        msgImgService.saveBatch(msgImgs);
+
+        log.info("聊天图片同步完成");
     }
 }

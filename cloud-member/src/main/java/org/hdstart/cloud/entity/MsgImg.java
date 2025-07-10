@@ -4,16 +4,16 @@ import com.baomidou.mybatisplus.annotation.*;
 
 import java.io.Serializable;
 import java.time.LocalDateTime;
-import java.util.Date;
+
 import lombok.Data;
 
 /**
  * 
- * @TableName point_message
+ * @TableName msg_img
  */
-@TableName(value ="point_message")
+@TableName(value ="msg_img")
 @Data
-public class PointMessage implements Serializable {
+public class MsgImg implements Serializable {
     /**
      * 
      */
@@ -23,30 +23,12 @@ public class PointMessage implements Serializable {
     /**
      * 
      */
-    private Integer sendId;
+    private String imgUrl;
 
-    /**
-     * 
-     */
-    private Integer recieveId;
-
-    /**
-     * 
-     */
-    private String textContent;
-
-    /**
-     * 
-     */
-    private Integer isRead;
-    private Integer status;
-
-    /**
-     * 
-     */
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createTime;
 
     @TableField(exist = false)
     private static final long serialVersionUID = 1L;
+
 }

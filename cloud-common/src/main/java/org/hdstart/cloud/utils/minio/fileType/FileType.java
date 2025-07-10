@@ -5,7 +5,8 @@ public enum FileType {
     AVATAR("avator"),
     NAS("nas"),
     BLOG("blog"),
-    BACK_IMG("back-img"),;
+    MSG_IMG("msg-img"),
+    BACK_IMG("back-img");
 
     private String type;
     FileType (String type) {

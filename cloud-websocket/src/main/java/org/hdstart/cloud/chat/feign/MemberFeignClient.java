@@ -18,7 +18,8 @@ public interface MemberFeignClient {
     Result<Boolean> storeMessage (@RequestParam(value = "sendId")Integer sendId,
                                          @RequestParam(value = "receiveId") Integer receiveId,
                                          @RequestParam(value = "message") String message,
-                                         @RequestParam(value = "isRead") Integer isRead);
+                                         @RequestParam(value = "isRead") Integer isRead,
+                                  @RequestParam(value = "status") Integer status);
 
     @GetMapping("/member/getMemberNickName")
     String getMemberNickName(@RequestParam("memberId") Integer id);

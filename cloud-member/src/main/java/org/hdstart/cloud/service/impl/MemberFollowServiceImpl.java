@@ -6,6 +6,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.hdstart.cloud.entity.MemberFollow;
 import org.hdstart.cloud.entity.OtherMemberInfo;
 import org.hdstart.cloud.mapper.*;
+import org.hdstart.cloud.result.Result;
 import org.hdstart.cloud.service.MemberFollowService;
 import org.hdstart.cloud.vo.*;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -109,6 +110,12 @@ public class MemberFollowServiceImpl extends ServiceImpl<MemberFollowMapper, Mem
             fanCountsVo.setOther(other.getOther());
         }
         return fanCountsVo;
+    }
+
+    @Override
+    public Result<List<FollowingMemberVo>> getFollowingMembers(Integer memberId, Integer currentPage, Integer pageSize) {
+        List<FollowingMemberVo> vos = memberFollowMapper.getFollowing(memberId,(currentPage - 1) * pageSize,pageSize);
+        return Result.success(vos);
     }
 }
 

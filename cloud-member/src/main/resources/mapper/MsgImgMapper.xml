@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.hdstart.cloud.mapper.MsgImgMapper">
+
+    <resultMap id="BaseResultMap" type="org.hdstart.cloud.entity.MsgImg">
+            <id property="id" column="id" jdbcType="INTEGER"/>
+            <result property="imgUrl" column="img_url" jdbcType="VARCHAR"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id,img_url
+    </sql>
+    <delete id="deleteBatchNames">
+        delete
+        from msg_img
+        where img_url in
+        <foreach collection="deleteSuccess" item="name" open="(" separator="," close=")">
+            #{name}
+        </foreach>
+    </delete>
+    <select id="getHistory" resultType="java.lang.String">
+        select img_url
+        from msg_img
+        where create_time &lt; #{sevenDayAgo}
+    </select>
+</mapper>

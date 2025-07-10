@@ -7,10 +7,8 @@ import org.hdstart.cloud.service.PointMessageService;
 import org.hdstart.cloud.vo.HistoryPointMessageVo;
 import org.hdstart.cloud.vo.PointMessageVo;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -27,7 +25,8 @@ public class PointMessageController {
     public Result<Boolean> storeMessage (@RequestParam(value = "sendId")Integer sendId,
                                  @RequestParam(value = "receiveId") Integer receiveId,
                                  @RequestParam(value = "message") String message,
-                                 @RequestParam(value = "isRead") Integer isRead) {
+                                 @RequestParam(value = "isRead") Integer isRead,
+                                         @RequestParam(value = "status") Integer status) {
 
         log.info("执行持久化");
         try {
@@ -36,6 +35,7 @@ public class PointMessageController {
             pointMessage.setRecieveId(receiveId);
             pointMessage.setTextContent(message);
             pointMessage.setIsRead(isRead);
+            pointMessage.setStatus(status);
 
             boolean saved = pointMessageService.save(pointMessage);
             if (!saved) {
@@ -66,5 +66,12 @@ public class PointMessageController {
 
         List<HistoryPointMessageVo> vos = pointMessageService.getHistory(sendId,receiveId,currentPage);
         return Result.success(vos);
+    }
+
+    @PostMapping("uploadImg")
+    public Result uploadImg(@RequestParam("images")List<MultipartFile> images) {
+
+        Result isSuccess = pointMessageService.uploadImg(images);
+        return isSuccess;
     }
 }

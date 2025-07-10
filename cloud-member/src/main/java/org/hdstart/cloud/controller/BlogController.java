@@ -161,7 +161,7 @@ public class BlogController {
                         return Result.success(JSON.parseArray(json, ShowBlogVo.class));
                     }
                     // 查询数据库
-                    List<ShowBlogVo> list = blogService.listShowBlogsCache(currentPage,10);
+                    List<ShowBlogVo> list = blogService.listShowBlogsCache(currentPage,20);
                     if (list != null && !list.isEmpty()) {
                         stringRedisTemplate.opsForValue().set(key, JSON.toJSONString(list), 30, TimeUnit.MINUTES);
                     }

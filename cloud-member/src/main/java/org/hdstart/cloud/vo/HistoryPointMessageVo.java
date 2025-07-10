@@ -14,4 +14,6 @@ public class HistoryPointMessageVo {
     private String message;
 
     private Integer isRead;
+
+    private Integer status;
 }

@@ -15,7 +15,7 @@ spring:
       port: 6379
 
 minio:
-  endpoint: http://47.109.93.230:9000        # MinIO 服务地址（换成你的服务器IP）
-  accessKey: hdstartY                       # 你设置的账号
-  secretKey: Ctbu@909703@                   # 你设置的密码
+  endpoint: http://122.152.237.135:9000       # MinIO 服务地址（换成你的服务器IP）
+  accessKey: minioadmin                       # 你设置的账号
+  secretKey: minioadmin                   # 你设置的密码
   bucketName: cloud-nas

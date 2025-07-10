@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import org.hdstart.cloud.vo.HistoryPointMessageVo;
 import org.hdstart.cloud.vo.PointMessageVo;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -23,6 +24,8 @@ public interface PointMessageMapper extends BaseMapper<PointMessage> {
     void setReadStatus(@Param("ids") List<Integer> ids);
 
     List<Integer> selectRecently(@Param("memberId") Integer memberId);
+
+    Boolean cleanChatHistory(@Param("now") LocalDateTime now, @Param("sevenDayAgo") LocalDateTime sevenDayAgo);
 }
 
 

@@ -7,6 +7,7 @@ import org.hdstart.cloud.service.MemberFollowService;
 import org.hdstart.cloud.service.MemberService;
 import org.hdstart.cloud.to.FollowedParamTo;
 import org.hdstart.cloud.vo.FanCountsVo;
+import org.hdstart.cloud.vo.FollowingMemberVo;
 import org.hdstart.cloud.vo.ShowBlogVo;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -75,4 +76,14 @@ public class MemberFollowedController {
         FanCountsVo fanCountsVo = memberFollowService.getFansCounts(memberId);
         return Result.success(fanCountsVo);
     }
+
+    @GetMapping("getFollowingMembers")
+    public Result<List<FollowingMemberVo>> getFollowingMembers (@RequestParam("memberId") Integer memberId,
+                                       @RequestParam("currentPage") Integer currentPage,
+                                       @RequestParam("pageSize") Integer pageSize) {
+
+        Result<List<FollowingMemberVo>> vos = memberFollowService.getFollowingMembers(memberId,currentPage,pageSize);
+        return vos;
+    }
+
 }

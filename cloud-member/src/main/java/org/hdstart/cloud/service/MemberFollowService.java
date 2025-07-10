@@ -2,7 +2,9 @@ package org.hdstart.cloud.service;
 
 import org.hdstart.cloud.entity.MemberFollow;
 import com.baomidou.mybatisplus.extension.service.IService;
+import org.hdstart.cloud.result.Result;
 import org.hdstart.cloud.vo.FanCountsVo;
+import org.hdstart.cloud.vo.FollowingMemberVo;
 import org.hdstart.cloud.vo.ShowBlogVo;
 
 import java.util.List;
@@ -17,4 +19,6 @@ public interface MemberFollowService extends IService<MemberFollow> {
     List<ShowBlogVo> listFollowedBlogs(Integer currentPage, Integer pageSize, List<Integer> followedIds, String orderType);
 
     FanCountsVo getFansCounts(Integer memberId);
+
+    Result<List<FollowingMemberVo>> getFollowingMembers(Integer memberId, Integer currentPage, Integer pageSize);
 }
