@@ -1,22 +1,20 @@
 package org.hdstart.cloud.controller;
 
 import com.alibaba.fastjson2.JSON;
-import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.hdstart.cloud.dto.BlogFile;
+import org.hdstart.cloud.elasticsearch.entity.ESBlogInfo;
 import org.hdstart.cloud.entity.Blog;
 import org.hdstart.cloud.result.Result;
 import org.hdstart.cloud.service.BlogService;
 import org.hdstart.cloud.vo.RecoverBlogVo;
 import org.hdstart.cloud.vo.ShowBlogVo;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import javax.net.ssl.HostnameVerifier;
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
@@ -37,7 +35,7 @@ public class BlogController {
     private BlogService blogService;
 
     @PostMapping("publishBlog")
-    public Result<Map<String,String>> publicBlog (@RequestParam("memberId") Integer memberId,
+    public Result<Map<String,String>> publishBlog (@RequestParam("memberId") Integer memberId,
                                                   @RequestParam("isPublic") Integer isPublic,
                                                   @RequestParam(value = "textContent",required = false) String textContent,
                                                   @RequestParam(value = "images",required = false) List<MultipartFile> images) {
@@ -196,5 +194,14 @@ public class BlogController {
         } else {
             return Result.success("已取消");
         }
+    }
+
+    @GetMapping("searchByES")
+    public Result searchByES(@RequestParam("searchValue") String searchValue,
+                             @RequestParam("currentPage") Integer currentPage,
+                             @RequestParam("pageSize") Integer pageSize) {
+
+        Result<List<ESBlogInfo>> result = blogService.searchByES(searchValue,currentPage,pageSize);
+        return result;
     }
 }

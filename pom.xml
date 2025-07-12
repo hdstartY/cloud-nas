@@ -36,10 +36,17 @@
         <minio-version>8.5.7</minio-version>
         <nacos-version>2023.0.1.2</nacos-version>
         <fastJson-version>2.0.47</fastJson-version>
+        <elasticsearch-version>8.18.3</elasticsearch-version>
     </properties>
 
     <dependencyManagement>
         <dependencies>
+            <dependency>
+                <groupId>co.elastic.clients</groupId>
+                <artifactId>elasticsearch-java</artifactId>
+                <version>${elasticsearch-version}</version> <!-- 对应你ES版本 -->
+            </dependency>
+
             <dependency>
                 <groupId>mysql</groupId>
                 <artifactId>mysql-connector-java</artifactId>

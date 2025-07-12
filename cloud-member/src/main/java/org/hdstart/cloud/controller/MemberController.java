@@ -1,20 +1,18 @@
 package org.hdstart.cloud.controller;
 
+import co.elastic.clients.elasticsearch.ElasticsearchClient;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
-import org.hdstart.cloud.dto.BlogFile;
 import org.hdstart.cloud.dto.MemberDTO;
 import org.hdstart.cloud.entity.Member;
 import org.hdstart.cloud.entity.OtherMemberInfo;
-import org.hdstart.cloud.esmapper.ESMemberInfoMapper;
 import org.hdstart.cloud.result.RE;
 import org.hdstart.cloud.result.Result;
 import org.hdstart.cloud.service.MemberService;
 import org.hdstart.cloud.service.OtherMemberInfoService;
 import org.hdstart.cloud.utils.JwtUtils;
-import org.hdstart.cloud.utils.minio.utils.MinioUtils;
-import org.hdstart.cloud.vo.ESMemberInfo;
+import org.hdstart.cloud.elasticsearch.entity.ESMemberInfo;
 import org.hdstart.cloud.vo.PublisherInfoVo;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -22,6 +20,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 
@@ -39,11 +38,11 @@ public class MemberController {
     @Autowired
     private StringRedisTemplate stringRedisTemplate;
 
-//    @Autowired
-//    private ESMemberInfoMapper esMemberInfoMapper;
-
     @Autowired
     private PasswordEncoder passwordEncoder;
+
+    @Autowired
+    private ElasticsearchClient elasticsearchClient;
 
 
     @PostMapping("loginByPhone")
@@ -101,9 +100,13 @@ public class MemberController {
     @PostMapping("saveMember")
     public Result saveMember (@Valid @RequestBody Member member) {
         // 重复校验
-        if (memberService.exists(new QueryWrapper<Member>().eq("phone", member.getPhone())) ||
-                memberService.exists(new QueryWrapper<Member>().eq("email", member.getEmail()))) {
+        if (memberService.exists(new QueryWrapper<Member>().eq("phone", member.getPhone()))) {
             return Result.error(RE.USER_REGISTER_FAILD);
+        }
+        if (!member.getEmail().isEmpty()) {
+            if (memberService.exists(new QueryWrapper<Member>().eq("email", member.getEmail()))) {
+                return Result.error(RE.USER_REGISTER_FAILD);
+            }
         }
         //加密密码
         String encodePassword = passwordEncoder.encode(member.getPassword());
@@ -113,15 +116,24 @@ public class MemberController {
         if (!isSuccess) {
             return Result.error(RE.USER_REGISTER_FAILD);
         }
+        Member storeMember = memberService.getById(member.getId());
         //保存es
         ESMemberInfo esMemberInfo = new ESMemberInfo();
         esMemberInfo.setId(member.getId().toString());
         esMemberInfo.setNickName(member.getNickName());
-//        try {
-//            esMemberInfoMapper.save(esMemberInfo);
-//        } catch (Exception e) {
-//            log.error("用户信息写入ES失败: " + e.getMessage());
-//        }
+        esMemberInfo.setAvatar(storeMember.getAvatar());
+        try {
+            log.info("保存用户信息到ES中...");
+            elasticsearchClient.index(i -> i
+                    .index("memberinfo")
+                    .id(member.getId().toString())
+                    .document(esMemberInfo)
+            );
+            log.info("用户信息成功保存到ES中...");
+        } catch (IOException e) {
+            log.error("用户数据保存ES失败...");
+        }
+
         //其他数据
         OtherMemberInfo otherMemberInfo = new OtherMemberInfo();
         otherMemberInfo.setMemberId(member.getId());
@@ -182,5 +194,14 @@ public class MemberController {
 
         String nickName = memberService.getMemberNickName(id);
         return nickName;
+    }
+
+    @GetMapping("searchByES")
+    public Result<List<ESMemberInfo>> searchByES(@RequestParam("currentPage") Integer currentPage,
+                                                 @RequestParam("pageSize") Integer pageSize,
+                                                 @RequestParam("searchValue") String searchValue) {
+
+        Result<List<ESMemberInfo>> result = memberService.searchByES(currentPage,pageSize,searchValue);
+        return result;
     }
 }

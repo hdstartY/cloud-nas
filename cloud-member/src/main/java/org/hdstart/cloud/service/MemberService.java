@@ -1,8 +1,10 @@
 package org.hdstart.cloud.service;
 
 import org.hdstart.cloud.dto.MemberDTO;
+import org.hdstart.cloud.elasticsearch.entity.ESMemberInfo;
 import org.hdstart.cloud.entity.Member;
 import com.baomidou.mybatisplus.extension.service.IService;
+import org.hdstart.cloud.result.Result;
 import org.hdstart.cloud.vo.PublisherInfoVo;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -26,4 +28,6 @@ public interface MemberService extends IService<Member> {
     MemberDTO getMemberInfo(Integer id);
 
     String getMemberNickName(Integer id);
+
+    Result<List<ESMemberInfo>> searchByES(Integer currentPage, Integer pageSize, String searchValue);
 }

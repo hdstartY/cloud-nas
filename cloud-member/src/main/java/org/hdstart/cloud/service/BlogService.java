@@ -1,6 +1,7 @@
 package org.hdstart.cloud.service;
 
 import org.hdstart.cloud.dto.BlogFile;
+import org.hdstart.cloud.elasticsearch.entity.ESBlogInfo;
 import org.hdstart.cloud.entity.Blog;
 import com.baomidou.mybatisplus.extension.service.IService;
 import org.hdstart.cloud.entity.BlogLike;
@@ -51,4 +52,6 @@ public interface BlogService extends IService<Blog> {
     List<BlogLike> getBlogLikes (String key);
 
     void cleanSaved (String key);
+
+    Result<List<ESBlogInfo>> searchByES(String searchValue,Integer currentPage,Integer pageSize);
 }

@@ -1,11 +1,16 @@
 package org.hdstart.cloud.service.impl;
 
+import co.elastic.clients.elasticsearch.ElasticsearchClient;
+import co.elastic.clients.elasticsearch.core.SearchResponse;
+import co.elastic.clients.elasticsearch.core.search.Hit;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.extern.slf4j.Slf4j;
 import net.bytebuddy.asm.Advice;
+import org.hdstart.cloud.async.ESSaveAsyncService;
 import org.hdstart.cloud.dto.BlogFile;
+import org.hdstart.cloud.elasticsearch.entity.ESBlogInfo;
 import org.hdstart.cloud.entity.*;
 import org.hdstart.cloud.mapper.*;
 import org.hdstart.cloud.result.Result;
@@ -24,6 +29,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
@@ -67,6 +73,12 @@ public class BlogServiceImpl extends ServiceImpl<BlogMapper, Blog>
     private BlogLikeMapper blogLikeMapper;
 
     @Autowired
+    private ElasticsearchClient elasticsearchClient;
+
+    @Autowired
+    private ESSaveAsyncService esSaveAsyncService;
+
+    @Autowired
     @Qualifier("taskExecutor")
     private Executor executor;
 
@@ -82,7 +94,7 @@ public class BlogServiceImpl extends ServiceImpl<BlogMapper, Blog>
             blog.setIsPublic(3);
         }
         int bIsSuccess = blogMapper.insert(blog);
-
+        List<String> urls = new ArrayList<>();
         if (bIsSuccess == 1 && blogFile.getImages() != null) {
             // 上传图片
             List<String> objectNames = new ArrayList<>();
@@ -102,7 +114,9 @@ public class BlogServiceImpl extends ServiceImpl<BlogMapper, Blog>
             objectNames.stream().forEach(item -> {
                 Images images = new Images();
                 images.setBlogId(blog.getId());
-                images.setImgUrl(minioUtils.getPreviewUrl(item));
+                String previewUrl = minioUtils.getPreviewUrl(item);
+                images.setImgUrl(previewUrl);
+                urls.add(previewUrl);
                 storeImages.add(images);
             });
 
@@ -113,6 +127,7 @@ public class BlogServiceImpl extends ServiceImpl<BlogMapper, Blog>
         }
 
         if (bIsSuccess == 1) {
+            esSaveAsyncService.saveBlogInfo(blog.getId().toString(),blog.getMemberId().toString(),blogFile.getTextContent(),urls,blog.getIsPublic());
             return Result.success("msg","发布成功");
         }
         return Result.error("msg","发布失败");
@@ -541,6 +556,35 @@ public class BlogServiceImpl extends ServiceImpl<BlogMapper, Blog>
     @Override
     public void cleanSaved (String key) {
         stringRedisTemplate.delete(key);
+    }
+
+    @Override
+    public Result<List<ESBlogInfo>> searchByES(String searchValue,Integer currentPage,Integer pageSize) {
+
+        SearchResponse<ESBlogInfo> response = null;
+        try {
+            response = elasticsearchClient.search(s -> s
+                            .index("bloginfo") // 索引名称
+                            .from(((currentPage - 1) * pageSize))
+                            .size(pageSize)
+                            .query(q -> q
+                                    .match(m -> m
+                                            .field("textContent")
+                                            .query(searchValue)
+                                    )
+                            ),
+                    ESBlogInfo.class
+            );
+        } catch (IOException e) {
+            log.error("ES查询blog出错...");
+            return Result.build(500,"查询出错",null);
+        }
+        List<ESBlogInfo> resultList = response.hits().hits().stream()
+                .map(Hit::source)
+                .filter(Objects::nonNull)
+                .toList();
+
+        return Result.success(resultList);
     }
 
     private void removeImages (List<String> objectNames) {

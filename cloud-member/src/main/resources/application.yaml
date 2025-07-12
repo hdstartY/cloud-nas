@@ -19,8 +19,7 @@ spring:
     redis:
       host: 122.152.237.135
       port: 6379
-  elasticsearch:
-    uris: http://47.109.93.230:9200
+
 
   #logging:
 #  level:

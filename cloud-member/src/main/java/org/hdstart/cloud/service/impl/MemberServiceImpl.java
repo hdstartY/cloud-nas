@@ -1,9 +1,14 @@
 package org.hdstart.cloud.service.impl;
 
+import co.elastic.clients.elasticsearch.ElasticsearchClient;
+import co.elastic.clients.elasticsearch.core.SearchResponse;
+import co.elastic.clients.elasticsearch.core.search.Hit;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import org.hdstart.cloud.dto.BlogFile;
 import org.hdstart.cloud.dto.MemberDTO;
+import org.hdstart.cloud.elasticsearch.entity.ESBlogInfo;
+import org.hdstart.cloud.elasticsearch.entity.ESMemberInfo;
 import org.hdstart.cloud.entity.Blog;
 import org.hdstart.cloud.entity.Member;
 import org.hdstart.cloud.entity.MemberFollow;
@@ -23,7 +28,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.List;
+import java.util.Objects;
 
 /**
 * @author 32600
@@ -48,6 +55,9 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member>
 
     @Autowired
     private MemberFollowMapper followMapper;
+
+    @Autowired
+    private ElasticsearchClient elasticsearchClient;
 
 
     @Override
@@ -165,6 +175,35 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member>
         return nickName;
     }
 
+    @Override
+    public Result<List<ESMemberInfo>> searchByES(Integer currentPage, Integer pageSize, String searchValue) {
+
+        SearchResponse<ESMemberInfo> response = null;
+        try {
+            response = elasticsearchClient.search(s -> s
+                            .index("memberinfo")
+                            .from(((currentPage - 1) * pageSize))
+                            .size(pageSize)
+                            .query(q -> q
+                                    .match(m -> m
+                                            .field("nickName")
+                                            .query(searchValue)
+                                    )
+                            ),
+                    ESMemberInfo.class
+            );
+        } catch (IOException e) {
+            log.error("ES查询blog出错...");
+            return Result.build(500,"查询出错",null);
+        }
+
+        List<ESMemberInfo> resultList = response.hits().hits().stream()
+                .map(Hit::source)
+                .filter(Objects::nonNull)
+                .toList();
+
+        return Result.success(resultList);
+    }
 }
 
 
