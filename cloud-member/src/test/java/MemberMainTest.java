@@ -1,4 +1,6 @@
 import org.hdstart.MemberMain;
+import org.hdstart.cloud.elasticsearch.entity.ESBlogInfo;
+import org.hdstart.cloud.mapper.BlogMapper;
 import org.hdstart.cloud.mapper.ImagesMapper;
 import org.hdstart.cloud.vo.BlogImgUrlVo;
 import org.junit.jupiter.api.Test;
@@ -18,6 +20,9 @@ public class MemberMainTest {
     @Autowired
     PasswordEncoder passwordEncoder;
 
+    @Autowired
+    BlogMapper blogMapper;
+
     @Test
     public void test001 () {
         String password = "88888888";
@@ -25,4 +30,9 @@ public class MemberMainTest {
         System.out.println(encode);
     }
 
+    @Test
+    public void test002 () {
+        List<ESBlogInfo> esBlogInfos = blogMapper.selectESBlogList(Arrays.asList(233));
+        System.out.println(esBlogInfos);
+    }
 }

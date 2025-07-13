@@ -4,10 +4,8 @@ import co.elastic.clients.elasticsearch.ElasticsearchClient;
 import co.elastic.clients.elasticsearch.core.SearchResponse;
 import co.elastic.clients.elasticsearch.core.search.Hit;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.extern.slf4j.Slf4j;
-import net.bytebuddy.asm.Advice;
 import org.hdstart.cloud.async.ESSaveAsyncService;
 import org.hdstart.cloud.dto.BlogFile;
 import org.hdstart.cloud.elasticsearch.entity.ESBlogInfo;
@@ -15,7 +13,6 @@ import org.hdstart.cloud.entity.*;
 import org.hdstart.cloud.mapper.*;
 import org.hdstart.cloud.result.Result;
 import org.hdstart.cloud.service.BlogService;
-import org.hdstart.cloud.service.CommentService;
 import org.hdstart.cloud.service.ImagesService;
 import org.hdstart.cloud.utils.minio.fileType.FileType;
 import org.hdstart.cloud.utils.minio.utils.MinioUtils;
@@ -23,7 +20,6 @@ import org.hdstart.cloud.vo.*;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -33,7 +29,6 @@ import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -94,7 +89,6 @@ public class BlogServiceImpl extends ServiceImpl<BlogMapper, Blog>
             blog.setIsPublic(3);
         }
         int bIsSuccess = blogMapper.insert(blog);
-        List<String> urls = new ArrayList<>();
         if (bIsSuccess == 1 && blogFile.getImages() != null) {
             // 上传图片
             List<String> objectNames = new ArrayList<>();
@@ -116,7 +110,6 @@ public class BlogServiceImpl extends ServiceImpl<BlogMapper, Blog>
                 images.setBlogId(blog.getId());
                 String previewUrl = minioUtils.getPreviewUrl(item);
                 images.setImgUrl(previewUrl);
-                urls.add(previewUrl);
                 storeImages.add(images);
             });
 
@@ -127,7 +120,6 @@ public class BlogServiceImpl extends ServiceImpl<BlogMapper, Blog>
         }
 
         if (bIsSuccess == 1) {
-            esSaveAsyncService.saveBlogInfo(blog.getId().toString(),blog.getMemberId().toString(),blogFile.getTextContent(),urls,blog.getIsPublic());
             return Result.success("msg","发布成功");
         }
         return Result.error("msg","发布失败");
@@ -159,7 +151,6 @@ public class BlogServiceImpl extends ServiceImpl<BlogMapper, Blog>
         Map<Integer, Long> blogMapCount = blogCommentCountVos.stream().collect(Collectors.toMap(item -> item.getBlogId(), item -> item.getCount()));
 
         List<ShowCommentVo> showCommentVos = commentMapper.listCWithMBatchBlogIdsF(blogIds);
-        System.out.println(showCommentVos);
         Map<Integer, List<ShowCommentVo>> commentGroup = showCommentVos.stream().collect(Collectors.groupingBy(ShowCommentVo::getBlogId));
         HashMap<Integer, List<ShowCommentVo>> blogIdMapComment = new HashMap<>();
         commentGroup.entrySet().stream().forEach(entry -> {
@@ -251,7 +242,6 @@ public class BlogServiceImpl extends ServiceImpl<BlogMapper, Blog>
         Map<Integer, Long> blogMapCount = blogCommentCountVos.stream().collect(Collectors.toMap(item -> item.getBlogId(), item -> item.getCount()));
 
         List<ShowCommentVo> showCommentVos = commentMapper.listCWithMBatchBlogIdsF(voBlogIds);
-        System.out.println(showCommentVos);
         Map<Integer, List<ShowCommentVo>> commentGroup = showCommentVos.stream().collect(Collectors.groupingBy(ShowCommentVo::getBlogId));
         HashMap<Integer, List<ShowCommentVo>> blogIdMapComment = new HashMap<>();
         commentGroup.entrySet().stream().forEach(entry -> {
@@ -275,7 +265,7 @@ public class BlogServiceImpl extends ServiceImpl<BlogMapper, Blog>
         }).collect(Collectors.toList());
 
         long endTime = System.currentTimeMillis();
-        log.info("获取主页博客花费：" + (endTime - startTime));
+        log.info("普通方法获取主页博客花费：" + (endTime - startTime));
         return showBlogVos;
     }
 
@@ -437,11 +427,18 @@ public class BlogServiceImpl extends ServiceImpl<BlogMapper, Blog>
     }
 
     @Override
-    public void passContent(Integer blogId) {
-        Blog blog = new Blog();
-        blog.setId(blogId);
-        blog.setIsPublic(1);
-        blogMapper.updateById(blog);
+    public Boolean passContent(Integer blogId) {
+            Boolean es_store_lock = stringRedisTemplate.hasKey("es_store_lock");
+            if (es_store_lock) {
+                log.error("有任务执行中...稍后再试");
+                return false;
+            }
+            Blog blog = new Blog();
+            blog.setId(blogId);
+            blog.setIsPublic(1);
+            blogMapper.updateById(blog);
+            stringRedisTemplate.opsForSet().add("blog_store_es",blogId.toString());
+            return true;
     }
 
     @Override
@@ -474,7 +471,6 @@ public class BlogServiceImpl extends ServiceImpl<BlogMapper, Blog>
         Map<Integer, Long> blogMapCount = blogCommentCountVos.stream().collect(Collectors.toMap(item -> item.getBlogId(), item -> item.getCount()));
 
         List<ShowCommentVo> showCommentVos = commentMapper.listCWithMBatchBlogIdsF(voBlogIds);
-        System.out.println(showCommentVos);
         Map<Integer, List<ShowCommentVo>> commentGroup = showCommentVos.stream().collect(Collectors.groupingBy(ShowCommentVo::getBlogId));
         HashMap<Integer, List<ShowCommentVo>> blogIdMapComment = new HashMap<>();
         commentGroup.entrySet().stream().forEach(entry -> {
@@ -498,7 +494,7 @@ public class BlogServiceImpl extends ServiceImpl<BlogMapper, Blog>
         }).collect(Collectors.toList());
 
         long endTime = System.currentTimeMillis();
-        log.info("获取主页博客花费：缓存" + String.valueOf(endTime - startTime));
+        log.info("缓存方法从数据库获取主页博客花费" + (endTime - startTime));
         return showBlogVos;
     }
 
@@ -563,9 +559,83 @@ public class BlogServiceImpl extends ServiceImpl<BlogMapper, Blog>
 
         SearchResponse<ESBlogInfo> response = null;
         try {
+             response = elasticsearchClient.search(s -> s
+                            .index("bloginfo")
+                            .from((currentPage - 1) * pageSize)
+                            .size(pageSize)
+                            .query(q -> q
+                                    .bool(b -> b
+                                            .should(sh1 -> sh1
+                                                    .match(m -> m
+                                                            .field("textContent")
+                                                            .query(searchValue)
+                                                    )
+                                            ).should(sh2 -> sh2
+                                                    .match(m -> m
+                                                            .field("nickName")
+                                                            .query(searchValue)
+                                                    )
+                                            )
+                                    )
+                            ),
+                    ESBlogInfo.class
+            );
+        } catch (IOException e) {
+            log.error("ES查询blog出错...");
+            return Result.build(500,"查询出错",null);
+        }
+        List<ESBlogInfo> resultList = response.hits().hits().stream()
+                .map(Hit::source)
+                .filter(Objects::nonNull)
+                .toList();
+
+        return Result.success(resultList);
+    }
+
+    @Override
+    public List<ESBlogInfo> getESBlogList(List<Integer> integerList) {
+
+        List<ESBlogInfo> esBlogInfos = new ArrayList<>();
+        CompletableFuture<Void> getVos = CompletableFuture.runAsync(() -> {
+            List<ESBlogInfo> vos = blogMapper.selectESBlogList(integerList);
+            esBlogInfos.addAll(vos);
+        }, executor);
+
+        HashMap<Integer, List<String>> blogIdMapUrl = new HashMap<>();
+        CompletableFuture<Void> getImgUrls = CompletableFuture.runAsync(() -> {
+            Map<Integer, List<BlogImgUrlVo>> vos = imagesMapper.listUrlBatchBlogIds(integerList).stream().collect(Collectors.groupingBy(BlogImgUrlVo::getBlogId));
+            vos.entrySet().stream().forEach(item -> {
+                Integer blogId = item.getKey();
+                List<String> imgUrls = item.getValue().stream().map(img -> {
+                    String imgUrl = img.getImgUrl();
+                    return imgUrl;
+                }).collect(Collectors.toList());
+                blogIdMapUrl.put(blogId,imgUrls);
+            });
+        }, executor);
+
+        CompletableFuture.allOf(getVos,getImgUrls).join();
+
+        if (esBlogInfos.isEmpty()) return null;
+
+        List<ESBlogInfo> ESBlogInfoList = esBlogInfos.stream().map(item -> {
+            List<String> imgUrls = blogIdMapUrl.get(Integer.valueOf(item.getId()));
+            if (imgUrls != null && !imgUrls.isEmpty()) {
+                item.setImages(imgUrls);
+            }
+            return item;
+        }).collect(Collectors.toList());
+
+        return ESBlogInfoList;
+    }
+
+    @Override
+    public Result<List<ESBlogInfo>> searchBlogByES(String searchValue, Integer currentPage, Integer pageSize) {
+        SearchResponse<ESBlogInfo> response = null;
+        try {
             response = elasticsearchClient.search(s -> s
-                            .index("bloginfo") // 索引名称
-                            .from(((currentPage - 1) * pageSize))
+                            .index("bloginfo")
+                            .from((currentPage - 1) * pageSize)
                             .size(pageSize)
                             .query(q -> q
                                     .match(m -> m
@@ -589,7 +659,7 @@ public class BlogServiceImpl extends ServiceImpl<BlogMapper, Blog>
 
     private void removeImages (List<String> objectNames) {
         ArrayList<String> alreadyRemove = new ArrayList<>();
-        objectNames.stream().forEach(item -> {
+        objectNames.forEach(item -> {
             try {
                 minioUtils.deleteFile(item);
                 alreadyRemove.add(item);

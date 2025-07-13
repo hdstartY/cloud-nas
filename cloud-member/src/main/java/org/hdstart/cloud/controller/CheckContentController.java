@@ -30,7 +30,10 @@ public class CheckContentController {
     @GetMapping("passContent")
     public Result passContent (@RequestParam(value = "blogId") Integer blogId) {
 
-        blogService.passContent(blogId);
-        return Result.success("成功");
+        Boolean isSuccess = blogService.passContent(blogId);
+        if (isSuccess) {
+            return Result.success("成功");
+        }
+        return Result.build(500,"有同步任务执行中...请稍后再试",null);
     }
 }

@@ -1,6 +1,7 @@
 package org.hdstart.cloud.mapper;
 
 import org.apache.ibatis.annotations.Param;
+import org.hdstart.cloud.elasticsearch.entity.ESBlogInfo;
 import org.hdstart.cloud.entity.Blog;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import org.hdstart.cloud.vo.CheckContentVo;
@@ -39,6 +40,7 @@ public interface BlogMapper extends BaseMapper<Blog> {
 
     List<ShowBlogVo> listBlogCache(@Param("currentPage") Integer currentPage, @Param("pageSize") Integer pageSize, @Param("now") LocalDateTime now, @Param("sevenDaysAgo") LocalDateTime sevenDaysAgo);
 
+    List<ESBlogInfo> selectESBlogList(@Param("integerList") List<Integer> integerList);
 }
 
 

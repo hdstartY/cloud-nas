@@ -67,7 +67,6 @@ public class MemberFollowServiceImpl extends ServiceImpl<MemberFollowMapper, Mem
         Map<Integer, Long> blogMapCount = blogCommentCountVos.stream().collect(Collectors.toMap(item -> item.getBlogId(), item -> item.getCount()));
 
         List<ShowCommentVo> showCommentVos = commentMapper.listCWithMBatchBlogIdsF(blogIds);
-        System.out.println(showCommentVos);
         Map<Integer, List<ShowCommentVo>> commentGroup = showCommentVos.stream().collect(Collectors.groupingBy(ShowCommentVo::getBlogId));
         HashMap<Integer, List<ShowCommentVo>> blogIdMapComment = new HashMap<>();
         commentGroup.entrySet().stream().forEach(entry -> {

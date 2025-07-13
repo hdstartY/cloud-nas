@@ -14,7 +14,6 @@ public class ElasticsearchConfig  {
 
     @Bean
     public ElasticsearchClient elasticsearchClient() {
-        // 替换为你的 ES 地址和端口，支持 HTTPS 和认证
         RestClient restClient = RestClient.builder(
                 new HttpHost("47.109.93.230", 9200, "http")).build();
 

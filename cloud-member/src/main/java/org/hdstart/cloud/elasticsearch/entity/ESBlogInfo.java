@@ -5,7 +5,6 @@ import lombok.Data;
 import org.hdstart.cloud.constant.es.ESFieldType;
 import org.hdstart.cloud.elasticsearch.annotation.ESField;
 
-import java.time.LocalDateTime;
 import java.util.List;
 
 @Data
@@ -20,10 +19,9 @@ public class ESBlogInfo {
     @ESField(type = ESFieldType.KEYWORD)
     private String avatar;
 
-    @ESField(type = ESFieldType.KEYWORD)
+    @ESField(type = ESFieldType.TEXT)
     private String nickName;
 
-    //可全文检索，并且添加 keyword 子字段用于聚合/排序
     @ESField(type = ESFieldType.TEXT, keywordSubField = true)
     private String textContent;
 

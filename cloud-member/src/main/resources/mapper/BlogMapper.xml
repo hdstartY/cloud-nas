@@ -90,5 +90,13 @@
         order by b.like_num DESC
         LIMIT #{pageSize} OFFSET #{currentPage}
     </select>
+    <select id="selectESBlogList" resultType="org.hdstart.cloud.elasticsearch.entity.ESBlogInfo">
+        SELECT b.id,b.member_id AS memberId,m.nick_name AS nickName,m.avatar AS avatar,b.text_content AS textContent,b.create_time AS createTime
+        FROM blog b LEFT JOIN `member` m ON b.member_id = m.id
+        WHERE b.id IN
+        <foreach collection="integerList" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </select>
 
 </mapper>

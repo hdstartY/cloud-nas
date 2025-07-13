@@ -144,7 +144,7 @@ public class BlogController {
         if (json != null && !json.isEmpty()) {
             List<ShowBlogVo> vos = JSON.parseArray(json, ShowBlogVo.class);
             long endTime = System.currentTimeMillis();
-            log.info("缓存费时：" + (endTime - startTime));
+            log.info("分页查询主页博客缓存费时：" + (endTime - startTime));
             return Result.success(vos);
         }
 
@@ -164,7 +164,7 @@ public class BlogController {
                         stringRedisTemplate.opsForValue().set(key, JSON.toJSONString(list), 30, TimeUnit.MINUTES);
                     }
                     long endTime = System.currentTimeMillis();
-                    log.info("查询数据库费时：" + (endTime - startTime));
+                    log.info("分页查询主页博客查询数据库费时：" + (endTime - startTime));
                     return Result.success(list);
                 } finally {
                     lock.unlock();
@@ -196,12 +196,21 @@ public class BlogController {
         }
     }
 
-    @GetMapping("searchByES")
+    @GetMapping("searchAllByES")
     public Result searchByES(@RequestParam("searchValue") String searchValue,
                              @RequestParam("currentPage") Integer currentPage,
                              @RequestParam("pageSize") Integer pageSize) {
 
         Result<List<ESBlogInfo>> result = blogService.searchByES(searchValue,currentPage,pageSize);
+        return result;
+    }
+
+    @GetMapping("searchBlogByES")
+    public Result searchBlogByES(@RequestParam("searchValue") String searchValue,
+                             @RequestParam("currentPage") Integer currentPage,
+                             @RequestParam("pageSize") Integer pageSize) {
+
+        Result<List<ESBlogInfo>> result = blogService.searchBlogByES(searchValue,currentPage,pageSize);
         return result;
     }
 }

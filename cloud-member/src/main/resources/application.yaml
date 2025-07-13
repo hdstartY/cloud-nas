@@ -19,7 +19,10 @@ spring:
     redis:
       host: 122.152.237.135
       port: 6379
-
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss
+    serialization:
+      write-dates-as-timestamps: false
 
   #logging:
 #  level:

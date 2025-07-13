@@ -43,7 +43,7 @@ public interface BlogService extends IService<Blog> {
 
     List<CheckContentVo> getCheckContent(Integer currentPage, Integer pageSize);
 
-    void passContent(Integer blogId);
+    Boolean passContent(Integer blogId);
 
     List<ShowBlogVo> listShowBlogsCache(Integer currentPage, Integer pageSize);
 
@@ -54,4 +54,8 @@ public interface BlogService extends IService<Blog> {
     void cleanSaved (String key);
 
     Result<List<ESBlogInfo>> searchByES(String searchValue,Integer currentPage,Integer pageSize);
+
+    List<ESBlogInfo> getESBlogList(List<Integer> integerList);
+
+    Result<List<ESBlogInfo>> searchBlogByES(String searchValue, Integer currentPage, Integer pageSize);
 }

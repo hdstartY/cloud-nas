@@ -65,7 +65,6 @@ public class MemberFollowedController {
 
     @PostMapping("listFollowed")
     public Result listFollowedBlogs (@RequestBody FollowedParamTo followedParamTo) {
-        System.out.println(followedParamTo);
         List<ShowBlogVo> showBlogVoList = memberFollowService.listFollowedBlogs(followedParamTo.getCurrentPage(),
                 followedParamTo.getPageSize(),followedParamTo.getFollowedId(),followedParamTo.getOrderType());
         return Result.success(showBlogVoList);
