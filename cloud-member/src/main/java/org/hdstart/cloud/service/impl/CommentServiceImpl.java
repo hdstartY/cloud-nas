@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 
 import java.lang.reflect.Array;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 /**
@@ -51,7 +52,11 @@ public class CommentServiceImpl extends ServiceImpl<CommentMapper, Comment>
 //        }).collect(Collectors.toList());
 //        return showCommentVos;
         List<ShowCommentVo> showCommentVos = commentMapper.listCWithMBatchBlogIds((currentPage - 1) * pageSize,pageSize,Arrays.asList(id));
-
+//        try {
+//            TimeUnit.SECONDS.sleep(3);
+//        } catch (InterruptedException e) {
+//            e.printStackTrace();
+//        }
 //        Page<Comment> commentPage = new Page<>(currentPage, pageSize);
 //        //查询评论基础信息
 //        List<Comment> comments = commentMapper.selectList(commentPage, new QueryWrapper<Comment>().eq("blog_id", id));

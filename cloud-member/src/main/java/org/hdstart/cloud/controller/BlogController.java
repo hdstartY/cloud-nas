@@ -69,7 +69,7 @@ public class BlogController {
 
     @GetMapping("list")
     public Result<List<ShowBlogVo>> listBlogs (@RequestParam(value = "currentPage",required = false,defaultValue = "1") Integer currentPage,
-                                               @RequestParam(value = "pageSize",required = false,defaultValue = "40") Integer pageSize,
+                                               @RequestParam(value = "pageSize",required = false,defaultValue = "30") Integer pageSize,
                                                @RequestParam(value = "orderType") String orderType) throws ExecutionException, InterruptedException {
 
         List<ShowBlogVo> showBlogVoList = blogService.listShowBlogs(currentPage,pageSize,orderType);

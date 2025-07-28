@@ -7,7 +7,7 @@
     <resultMap id="BaseResultMap" type="org.hdstart.cloud.entity.Images">
             <id property="id" column="id" jdbcType="INTEGER"/>
             <result property="blogId" column="blog_id" jdbcType="INTEGER"/>
-            <result property="imgUrl" column="img_url" jdbcType="VARCHAR"/>
+            <result property="preUrl" column="img_url" jdbcType="VARCHAR"/>
             <result property="createTime" column="create_time" jdbcType="DATE"/>
             <result property="isDeleted" column="is_deleted" jdbcType="INTEGER"/>
     </resultMap>
@@ -25,18 +25,18 @@
     </delete>
     <delete id="deleteBatchUrls">
         delete from images
-        where img_url in
+        where pre_url in
         <foreach collection="removeImgUrls" item="url" open="(" separator="," close=")">
             #{url}
         </foreach>
     </delete>
-    <select id="selectListUrls" resultType="java.lang.String">
-        select `img_url`
+    <select id="selectListUrls" resultType="org.hdstart.cloud.to.ImgTo">
+        select `pre_url` as preUrl,ori_url as oriUrl
         from images
         where blog_id = #{blogId}
     </select>
     <select id="listUrlBatchBlogIds" resultType="org.hdstart.cloud.vo.BlogImgUrlVo">
-        SELECT blog_id as blogId,img_url as imgUrl
+        SELECT blog_id as blogId,pre_url as preUrl,ori_url as oriUrl,is_video AS isVideo
         FROM `images`
         WHERE blog_id IN
         <foreach collection="voBlogIds" item="id" open="(" separator="," close=")">

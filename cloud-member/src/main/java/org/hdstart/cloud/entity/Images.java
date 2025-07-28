@@ -28,7 +28,9 @@ public class Images {
     /**
      * 
      */
-    private String imgUrl;
+    private String preUrl;
+    private String oriUrl;
+    private Integer isVideo;
 
     /**
      * 
@@ -41,4 +43,6 @@ public class Images {
      */
     @TableLogic
     private Integer isDeleted;
+
+    private Integer state;
 }

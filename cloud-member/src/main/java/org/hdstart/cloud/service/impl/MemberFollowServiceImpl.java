@@ -8,6 +8,7 @@ import org.hdstart.cloud.entity.OtherMemberInfo;
 import org.hdstart.cloud.mapper.*;
 import org.hdstart.cloud.result.Result;
 import org.hdstart.cloud.service.MemberFollowService;
+import org.hdstart.cloud.to.ImgTo;
 import org.hdstart.cloud.vo.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -54,11 +55,15 @@ public class MemberFollowServiceImpl extends ServiceImpl<MemberFollowMapper, Mem
         }).collect(Collectors.toList());
         //获得所有图片信息
         List<BlogImgUrlVo> blogImgUrlVos = imagesMapper.listUrlBatchBlogIds(blogIds);
-        HashMap<Integer, List<String>> blogMapUrl = new HashMap<>();
+        HashMap<Integer, List<ImgTo>> blogMapUrl = new HashMap<>();
         blogImgUrlVos.stream().collect(Collectors.groupingBy(BlogImgUrlVo::getBlogId)).entrySet().stream().forEach(entry -> {
             Integer blogId = entry.getKey();
-            List<String> imgUrls = entry.getValue().stream().map(item -> {
-                return item.getImgUrl();
+            List<ImgTo> imgUrls = entry.getValue().stream().map(item -> {
+                ImgTo imgTo = new ImgTo();
+                imgTo.setPreUrl(item.getPreUrl());
+                imgTo.setOriUrl(item.getOriUrl());
+                imgTo.setIsVideo(item.getIsVideo());
+                return imgTo;
             }).collect(Collectors.toList());
             blogMapUrl.put(blogId,imgUrls);
         });
@@ -66,27 +71,27 @@ public class MemberFollowServiceImpl extends ServiceImpl<MemberFollowMapper, Mem
         List<BlogCommentCountVo> blogCommentCountVos = commentMapper.listCommentCountByBlogIds(blogIds);
         Map<Integer, Long> blogMapCount = blogCommentCountVos.stream().collect(Collectors.toMap(item -> item.getBlogId(), item -> item.getCount()));
 
-        List<ShowCommentVo> showCommentVos = commentMapper.listCWithMBatchBlogIdsF(blogIds);
-        Map<Integer, List<ShowCommentVo>> commentGroup = showCommentVos.stream().collect(Collectors.groupingBy(ShowCommentVo::getBlogId));
-        HashMap<Integer, List<ShowCommentVo>> blogIdMapComment = new HashMap<>();
-        commentGroup.entrySet().stream().forEach(entry -> {
-            Integer blogId = entry.getKey();
-            List<ShowCommentVo> items = entry.getValue();
-            blogIdMapComment.put(blogId, items);
-        });
+//        List<ShowCommentVo> showCommentVos = commentMapper.listCWithMBatchBlogIdsF(blogIds);
+//        Map<Integer, List<ShowCommentVo>> commentGroup = showCommentVos.stream().collect(Collectors.groupingBy(ShowCommentVo::getBlogId));
+//        HashMap<Integer, List<ShowCommentVo>> blogIdMapComment = new HashMap<>();
+//        commentGroup.entrySet().stream().forEach(entry -> {
+//            Integer blogId = entry.getKey();
+//            List<ShowCommentVo> items = entry.getValue();
+//            blogIdMapComment.put(blogId, items);
+//        });
 
         //组装
         List<ShowBlogVo> showBlogVos = vos.stream().map(item -> {
-            List<String> urls = blogMapUrl.get(item.getId());
+            List<ImgTo> urls = blogMapUrl.get(item.getId());
             item.setImages(urls);
             Long count = blogMapCount.get(item.getId());
             if (count != null) {
                 item.setCommentNum(count);
             }
-            List<ShowCommentVo> commentVos = blogIdMapComment.get(item.getId());
-            if (commentVos != null) {
-                item.setComments(commentVos);
-            }
+//            List<ShowCommentVo> commentVos = blogIdMapComment.get(item.getId());
+//            if (commentVos != null) {
+//                item.setComments(commentVos);
+//            }
             return item;
         }).collect(Collectors.toList());
 

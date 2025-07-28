@@ -4,6 +4,7 @@ import org.apache.ibatis.annotations.Param;
 import org.hdstart.cloud.dto.MemberDTO;
 import org.hdstart.cloud.entity.Member;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import org.hdstart.cloud.vo.MemberVo;
 
 /**
 * @author 32600
@@ -16,6 +17,8 @@ public interface MemberMapper extends BaseMapper<Member> {
     MemberDTO getMemberInfo(@Param("id") Integer id);
 
     String getMemberNickName(@Param("id") Integer id);
+
+    MemberVo getVoById(@Param("id") Integer id);
 }
 
 

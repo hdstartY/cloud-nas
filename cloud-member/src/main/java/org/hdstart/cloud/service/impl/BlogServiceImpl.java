@@ -6,7 +6,11 @@ import co.elastic.clients.elasticsearch.core.search.Hit;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.extern.slf4j.Slf4j;
+import net.coobird.thumbnailator.Thumbnailator;
+import net.coobird.thumbnailator.Thumbnails;
+import org.hdstart.cloud.async.BlogAsyncService;
 import org.hdstart.cloud.async.ESSaveAsyncService;
+import org.hdstart.cloud.async.VideoThumbnailService;
 import org.hdstart.cloud.dto.BlogFile;
 import org.hdstart.cloud.elasticsearch.entity.ESBlogInfo;
 import org.hdstart.cloud.entity.*;
@@ -14,6 +18,7 @@ import org.hdstart.cloud.mapper.*;
 import org.hdstart.cloud.result.Result;
 import org.hdstart.cloud.service.BlogService;
 import org.hdstart.cloud.service.ImagesService;
+import org.hdstart.cloud.to.ImgTo;
 import org.hdstart.cloud.utils.minio.fileType.FileType;
 import org.hdstart.cloud.utils.minio.utils.MinioUtils;
 import org.hdstart.cloud.vo.*;
@@ -25,6 +30,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.awt.image.BufferedImage;
+import java.io.File;
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.*;
@@ -74,12 +81,19 @@ public class BlogServiceImpl extends ServiceImpl<BlogMapper, Blog>
     private ESSaveAsyncService esSaveAsyncService;
 
     @Autowired
+    private BlogAsyncService blogAsyncService;
+
+    @Autowired
     @Qualifier("taskExecutor")
     private Executor executor;
+
+    @Autowired
+    private VideoThumbnailService videoThumbnailService;
 
     @Transactional(rollbackFor = Exception.class)
     @Override
     public Result<Map<String, String>> publishBlog(BlogFile blogFile) {
+
         Blog blog = new Blog();
         BeanUtils.copyProperties(blogFile, blog);
         if (blog.getIsPublic() == 1) {
@@ -91,16 +105,33 @@ public class BlogServiceImpl extends ServiceImpl<BlogMapper, Blog>
         int bIsSuccess = blogMapper.insert(blog);
         if (bIsSuccess == 1 && blogFile.getImages() != null) {
             // 上传图片
-            List<String> objectNames = new ArrayList<>();
+            List<Images> objectNames = new ArrayList<>();
             for (MultipartFile file : blogFile.getImages()) {
-                String fileName = null;
+                Images images = new Images();
                 try {
-                    fileName = minioUtils.uploadFile(file, FileType.BLOG);
+                    boolean isVideo = videoThumbnailService.isAllowedVideoFormat(file.getContentType(), file.getOriginalFilename());
+                    if (isVideo) {
+                        try {
+                            byte[] jpgs = videoThumbnailService.generateThumbnail(file, 1, "jpeg");
+                            images.setPreUrl(minioUtils.uploadVideoPre(jpgs, file.getOriginalFilename(), FileType.VIDEO_PRE));
+                            images.setOriUrl(minioUtils.uploadFile(file, FileType.VIDEO));
+                            images.setIsVideo(1);
+                        } catch (Exception e) {
+                            log.error("视频生成缩略图失败！");
+                        }
+                    } else {
+                        BufferedImage bufferedImage = Thumbnails.of(file.getInputStream()).size(120, 120).asBufferedImage();
+                        images.setPreUrl(minioUtils.uploadPreFile(bufferedImage, file.getOriginalFilename(), FileType.PRE_IMG));
+                        images.setOriUrl(minioUtils.uploadFile(file, FileType.BLOG));
+                        images.setIsVideo(0);
+                    }
                 } catch (Exception e) {
-                    removeImages(objectNames);
+                    //TODO 上传失败策略
+//                    removeImages(objectNames);
+                    System.out.println(e.fillInStackTrace());
                     throw new RuntimeException("发布失败！");
                 }
-                objectNames.add(fileName);
+                objectNames.add(images);
             }
 
             //保存图片数据
@@ -108,8 +139,11 @@ public class BlogServiceImpl extends ServiceImpl<BlogMapper, Blog>
             objectNames.stream().forEach(item -> {
                 Images images = new Images();
                 images.setBlogId(blog.getId());
-                String previewUrl = minioUtils.getPreviewUrl(item);
-                images.setImgUrl(previewUrl);
+                String previewUrl = minioUtils.getPreviewUrl(item.getPreUrl());
+                String oriviewUrl = minioUtils.getPreviewUrl(item.getOriUrl());
+                images.setPreUrl(previewUrl);
+                images.setOriUrl(oriviewUrl);
+                images.setIsVideo(item.getIsVideo());
                 storeImages.add(images);
             });
 
@@ -138,11 +172,15 @@ public class BlogServiceImpl extends ServiceImpl<BlogMapper, Blog>
         }).collect(Collectors.toList());
         //获得所有图片信息
         List<BlogImgUrlVo> blogImgUrlVos = imagesMapper.listUrlBatchBlogIds(blogIds);
-        HashMap<Integer, List<String>> blogMapUrl = new HashMap<>();
+        HashMap<Integer, List<ImgTo>> blogMapUrl = new HashMap<>();
         blogImgUrlVos.stream().collect(Collectors.groupingBy(BlogImgUrlVo::getBlogId)).entrySet().stream().forEach(entry -> {
             Integer blogId = entry.getKey();
-            List<String> imgUrls = entry.getValue().stream().map(item -> {
-                return item.getImgUrl();
+            List<ImgTo> imgUrls = entry.getValue().stream().map(item -> {
+                ImgTo imgTo = new ImgTo();
+                imgTo.setPreUrl(item.getPreUrl());
+                imgTo.setOriUrl(item.getOriUrl());
+                imgTo.setIsVideo(item.getIsVideo());
+                return imgTo;
             }).collect(Collectors.toList());
             blogMapUrl.put(blogId,imgUrls);
         });
@@ -150,27 +188,27 @@ public class BlogServiceImpl extends ServiceImpl<BlogMapper, Blog>
         List<BlogCommentCountVo> blogCommentCountVos = commentMapper.listCommentCountByBlogIds(blogIds);
         Map<Integer, Long> blogMapCount = blogCommentCountVos.stream().collect(Collectors.toMap(item -> item.getBlogId(), item -> item.getCount()));
 
-        List<ShowCommentVo> showCommentVos = commentMapper.listCWithMBatchBlogIdsF(blogIds);
-        Map<Integer, List<ShowCommentVo>> commentGroup = showCommentVos.stream().collect(Collectors.groupingBy(ShowCommentVo::getBlogId));
-        HashMap<Integer, List<ShowCommentVo>> blogIdMapComment = new HashMap<>();
-        commentGroup.entrySet().stream().forEach(entry -> {
-            Integer blogId = entry.getKey();
-            List<ShowCommentVo> items = entry.getValue();
-            blogIdMapComment.put(blogId, items);
-        });
+//        List<ShowCommentVo> showCommentVos = commentMapper.listCWithMBatchBlogIdsF(blogIds);
+//        Map<Integer, List<ShowCommentVo>> commentGroup = showCommentVos.stream().collect(Collectors.groupingBy(ShowCommentVo::getBlogId));
+//        HashMap<Integer, List<ShowCommentVo>> blogIdMapComment = new HashMap<>();
+//        commentGroup.entrySet().stream().forEach(entry -> {
+//            Integer blogId = entry.getKey();
+//            List<ShowCommentVo> items = entry.getValue();
+//            blogIdMapComment.put(blogId, items);
+//        });
 
         //组装
         List<ShowBlogVo> showBlogVos = vos.stream().map(item -> {
-            List<String> urls = blogMapUrl.get(item.getId());
+            List<ImgTo> urls = blogMapUrl.get(item.getId());
             item.setImages(urls);
             Long count = blogMapCount.get(item.getId());
             if (count != null) {
                 item.setCommentNum(count);
             }
-            List<ShowCommentVo> commentVos = blogIdMapComment.get(item.getId());
-            if (commentVos != null) {
-                item.setComments(commentVos);
-            }
+//            List<ShowCommentVo> commentVos = blogIdMapComment.get(item.getId());
+//            if (commentVos != null) {
+//                item.setComments(commentVos);
+//            }
             return item;
         }).collect(Collectors.toList());
 
@@ -197,7 +235,7 @@ public class BlogServiceImpl extends ServiceImpl<BlogMapper, Blog>
         },executor);
         //图片信息
         CompletableFuture<Void> imgComplete = CompletableFuture.runAsync(() -> {
-            List<String> urls = imagesMapper.selectListUrls(blogId);
+            List<ImgTo> urls = imagesMapper.selectListUrls(blogId);
             showBlogVo.setImages(urls);
         }, executor);
 
@@ -217,7 +255,7 @@ public class BlogServiceImpl extends ServiceImpl<BlogMapper, Blog>
         long startTime = System.currentTimeMillis();
 
         LocalDateTime now = LocalDateTime.now();
-        LocalDateTime sevenDaysAgo = now.minusDays(7);
+        LocalDateTime sevenDaysAgo = now.minusDays(30);
 
         //1.查询基础博客
         List<ShowBlogVo> vos = blogMapper.listBlogWithMember((currentPage - 1) * pageSize,pageSize,orderType,now,sevenDaysAgo);
@@ -228,12 +266,16 @@ public class BlogServiceImpl extends ServiceImpl<BlogMapper, Blog>
         //2.批量查询所有图片url
         List<BlogImgUrlVo> blogImgUrlVos = imagesMapper.listUrlBatchBlogIds(voBlogIds);
         Map<Integer, List<BlogImgUrlVo>> group = blogImgUrlVos.stream().collect(Collectors.groupingBy(BlogImgUrlVo::getBlogId));
-        HashMap<Integer, List<String>> mapUrl = new HashMap<>();
+        HashMap<Integer, List<ImgTo>> mapUrl = new HashMap<>();
         group.entrySet().stream().forEach(entry -> {
             Integer blogId = entry.getKey();
             List<BlogImgUrlVo> items = entry.getValue();
-            List<String> urls = items.stream().map(item -> {
-                return item.getImgUrl();
+            List<ImgTo> urls = items.stream().map(item -> {
+                ImgTo imgTo = new ImgTo();
+                imgTo.setPreUrl(item.getPreUrl());
+                imgTo.setOriUrl(item.getOriUrl());
+                imgTo.setIsVideo(item.getIsVideo());
+                return imgTo;
             }).collect(Collectors.toList());
             mapUrl.put(blogId, urls);
         });
@@ -251,7 +293,7 @@ public class BlogServiceImpl extends ServiceImpl<BlogMapper, Blog>
         });
         //组装
         List<ShowBlogVo> showBlogVos = vos.stream().map(item -> {
-            List<String> urls = mapUrl.get(item.getId());
+            List<ImgTo> urls = mapUrl.get(item.getId());
             List<ShowCommentVo> showCommentVoList = blogIdMapComment.get(item.getId());
             Long commentCounts = blogMapCount.get(item.getId());
             item.setImages(urls);
@@ -287,7 +329,7 @@ public class BlogServiceImpl extends ServiceImpl<BlogMapper, Blog>
         imgMapBlogId.entrySet().stream().forEach(item -> {
             Integer blogId = item.getKey();
             List<String> urls = item.getValue().stream().map(img -> {
-                String imgUrl = img.getImgUrl();
+                String imgUrl = img.getPreUrl();
                 return imgUrl;
             }).collect(Collectors.toList());
             urlMapBlogId.put(blogId, urls);
@@ -319,7 +361,7 @@ public class BlogServiceImpl extends ServiceImpl<BlogMapper, Blog>
         List<Images> images = imagesMapper.selectList(new QueryWrapper<Images>().eq("blog_id", blogId));
         if (images != null && images.size() > 0) {
             List<String> urls = images.stream().map(item -> {
-                String imgUrl = item.getImgUrl();
+                String imgUrl = item.getPreUrl();
                 return imgUrl;
             }).collect(Collectors.toList());
 
@@ -345,6 +387,7 @@ public class BlogServiceImpl extends ServiceImpl<BlogMapper, Blog>
         return true;
     }
 
+    //TODO 注意更新该方法
     @Transactional
     @Override
     public void updateBlog(Integer blogId, String textContent, List<String> removeImgUrls, List<MultipartFile> images) {
@@ -375,7 +418,7 @@ public class BlogServiceImpl extends ServiceImpl<BlogMapper, Blog>
             });
         }
 
-        ArrayList<String> objectNames = new ArrayList<>();
+        List<String> objectNames = new ArrayList<>();
         if (images != null && !images.isEmpty()) {
             try {
                 images.stream().forEach(item -> {
@@ -383,14 +426,14 @@ public class BlogServiceImpl extends ServiceImpl<BlogMapper, Blog>
                     objectNames.add(objectName);
                 });
             } catch (Exception e) {
-                removeImages(objectNames);
+//                removeImages(objectNames);
                 throw new RuntimeException(e);
             }
         }
         List<Images> imagesList = objectNames.stream().map(item -> {
             String previewUrl = minioUtils.getPreviewUrl(item);
             Images preStoreImg = new Images();
-            preStoreImg.setImgUrl(previewUrl);
+            preStoreImg.setPreUrl(previewUrl);
             preStoreImg.setBlogId(blogId);
             return preStoreImg;
         }).collect(Collectors.toList());
@@ -412,7 +455,7 @@ public class BlogServiceImpl extends ServiceImpl<BlogMapper, Blog>
         blogImgUrlVos.stream().collect(Collectors.groupingBy(BlogImgUrlVo::getBlogId)).entrySet().stream().forEach(item -> {
             Integer blogId = item.getKey();
             List<String> urls = item.getValue().stream().map(img -> {
-                String imgUrl = img.getImgUrl();
+                String imgUrl = img.getPreUrl();
                 return imgUrl;
             }).collect(Collectors.toList());
             blogIdMapUrl.put(blogId,urls);
@@ -457,12 +500,16 @@ public class BlogServiceImpl extends ServiceImpl<BlogMapper, Blog>
         //2.批量查询所有图片url
         List<BlogImgUrlVo> blogImgUrlVos = imagesMapper.listUrlBatchBlogIds(voBlogIds);
         Map<Integer, List<BlogImgUrlVo>> group = blogImgUrlVos.stream().collect(Collectors.groupingBy(BlogImgUrlVo::getBlogId));
-        HashMap<Integer, List<String>> mapUrl = new HashMap<>();
+        HashMap<Integer, List<ImgTo>> mapUrl = new HashMap<>();
         group.entrySet().stream().forEach(entry -> {
             Integer blogId = entry.getKey();
             List<BlogImgUrlVo> items = entry.getValue();
-            List<String> urls = items.stream().map(item -> {
-                return item.getImgUrl();
+            List<ImgTo> urls = items.stream().map(item -> {
+                ImgTo imgTo = new ImgTo();
+                imgTo.setPreUrl(item.getPreUrl());
+                imgTo.setOriUrl(item.getOriUrl());
+                imgTo.setIsVideo(item.getIsVideo());
+                return imgTo;
             }).collect(Collectors.toList());
             mapUrl.put(blogId, urls);
         });
@@ -470,23 +517,23 @@ public class BlogServiceImpl extends ServiceImpl<BlogMapper, Blog>
         List<BlogCommentCountVo> blogCommentCountVos = commentMapper.listCommentCountByBlogIds(voBlogIds);
         Map<Integer, Long> blogMapCount = blogCommentCountVos.stream().collect(Collectors.toMap(item -> item.getBlogId(), item -> item.getCount()));
 
-        List<ShowCommentVo> showCommentVos = commentMapper.listCWithMBatchBlogIdsF(voBlogIds);
-        Map<Integer, List<ShowCommentVo>> commentGroup = showCommentVos.stream().collect(Collectors.groupingBy(ShowCommentVo::getBlogId));
-        HashMap<Integer, List<ShowCommentVo>> blogIdMapComment = new HashMap<>();
-        commentGroup.entrySet().stream().forEach(entry -> {
-            Integer blogId = entry.getKey();
-            List<ShowCommentVo> items = entry.getValue();
-            blogIdMapComment.put(blogId, items);
-        });
+//        List<ShowCommentVo> showCommentVos = commentMapper.listCWithMBatchBlogIdsF(voBlogIds);
+//        Map<Integer, List<ShowCommentVo>> commentGroup = showCommentVos.stream().collect(Collectors.groupingBy(ShowCommentVo::getBlogId));
+//        HashMap<Integer, List<ShowCommentVo>> blogIdMapComment = new HashMap<>();
+//        commentGroup.entrySet().stream().forEach(entry -> {
+//            Integer blogId = entry.getKey();
+//            List<ShowCommentVo> items = entry.getValue();
+//            blogIdMapComment.put(blogId, items);
+//        });
         //组装
         List<ShowBlogVo> showBlogVos = vos.stream().map(item -> {
-            List<String> urls = mapUrl.get(item.getId());
-            List<ShowCommentVo> showCommentVoList = blogIdMapComment.get(item.getId());
+            List<ImgTo> urls = mapUrl.get(item.getId());
+//            List<ShowCommentVo> showCommentVoList = blogIdMapComment.get(item.getId());
             Long commentCounts = blogMapCount.get(item.getId());
             item.setImages(urls);
-            if (showCommentVoList != null) {
-                item.setComments(showCommentVoList);
-            }
+//            if (showCommentVoList != null) {
+//                item.setComments(showCommentVoList);
+//            }
             if (commentCounts != null) {
                 item.setCommentNum(commentCounts);
             }
@@ -601,16 +648,21 @@ public class BlogServiceImpl extends ServiceImpl<BlogMapper, Blog>
             esBlogInfos.addAll(vos);
         }, executor);
 
-        HashMap<Integer, List<String>> blogIdMapUrl = new HashMap<>();
+        HashMap<Integer, List<ImgTo>> blogIdMapUrl = new HashMap<>();
         CompletableFuture<Void> getImgUrls = CompletableFuture.runAsync(() -> {
-            Map<Integer, List<BlogImgUrlVo>> vos = imagesMapper.listUrlBatchBlogIds(integerList).stream().collect(Collectors.groupingBy(BlogImgUrlVo::getBlogId));
-            vos.entrySet().stream().forEach(item -> {
-                Integer blogId = item.getKey();
-                List<String> imgUrls = item.getValue().stream().map(img -> {
-                    String imgUrl = img.getImgUrl();
-                    return imgUrl;
+            List<BlogImgUrlVo> blogImgUrlVos = imagesMapper.listUrlBatchBlogIds(integerList);
+            Map<Integer, List<BlogImgUrlVo>> group = blogImgUrlVos.stream().collect(Collectors.groupingBy(BlogImgUrlVo::getBlogId));
+            group.entrySet().stream().forEach(entry -> {
+                Integer blogId = entry.getKey();
+                List<BlogImgUrlVo> items = entry.getValue();
+                List<ImgTo> urls = items.stream().map(item -> {
+                    ImgTo imgTo = new ImgTo();
+                    imgTo.setPreUrl(item.getPreUrl());
+                    imgTo.setOriUrl(item.getOriUrl());
+                    imgTo.setIsVideo(item.getIsVideo());
+                    return imgTo;
                 }).collect(Collectors.toList());
-                blogIdMapUrl.put(blogId,imgUrls);
+                blogIdMapUrl.put(blogId, urls);
             });
         }, executor);
 
@@ -619,7 +671,7 @@ public class BlogServiceImpl extends ServiceImpl<BlogMapper, Blog>
         if (esBlogInfos.isEmpty()) return null;
 
         List<ESBlogInfo> ESBlogInfoList = esBlogInfos.stream().map(item -> {
-            List<String> imgUrls = blogIdMapUrl.get(Integer.valueOf(item.getId()));
+            List<ImgTo> imgUrls = blogIdMapUrl.get(Integer.valueOf(item.getId()));
             if (imgUrls != null && !imgUrls.isEmpty()) {
                 item.setImages(imgUrls);
             }
@@ -657,17 +709,18 @@ public class BlogServiceImpl extends ServiceImpl<BlogMapper, Blog>
         return Result.success(resultList);
     }
 
-    private void removeImages (List<String> objectNames) {
-        ArrayList<String> alreadyRemove = new ArrayList<>();
-        objectNames.forEach(item -> {
-            try {
-                minioUtils.deleteFile(item);
-                alreadyRemove.add(item);
-            } catch (Exception ex) {
-                //TODO 可以使用消息中间件重新删除
-            }
-        });
+    private void removeImages (List<Images> images) {
+//        ArrayList<String> alreadyRemove = new ArrayList<>();
+//        objectNames.forEach(item -> {
+//            try {
+//                minioUtils.deleteFile(item);
+//                alreadyRemove.add(item);
+//            } catch (Exception ex) {
+//                //TODO 可以使用消息中间件重新删除
+//            }
+//        });
     }
+
 
 }
 

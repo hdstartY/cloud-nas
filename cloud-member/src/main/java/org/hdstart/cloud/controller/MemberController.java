@@ -13,6 +13,7 @@ import org.hdstart.cloud.service.MemberService;
 import org.hdstart.cloud.service.OtherMemberInfoService;
 import org.hdstart.cloud.utils.JwtUtils;
 import org.hdstart.cloud.elasticsearch.entity.ESMemberInfo;
+import org.hdstart.cloud.vo.MemberVo;
 import org.hdstart.cloud.vo.PublisherInfoVo;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -203,5 +204,11 @@ public class MemberController {
 
         Result<List<ESMemberInfo>> result = memberService.searchByES(currentPage,pageSize,searchValue);
         return result;
+    }
+
+    @GetMapping("getById")
+    public Result<MemberVo> getById(@RequestParam("id") Integer id) {
+        MemberVo vo = memberService.getVoById(id);
+        return Result.success(vo);
     }
 }

@@ -1,18 +1,18 @@
-package org.hdstart.cloud.elasticsearch.entity;
+package org.hdstart.cloud.to;
 
 import lombok.Data;
 import org.hdstart.cloud.elasticsearch.annotation.ESField;
 import org.hdstart.cloud.elasticsearch.constant.ESFieldType;
 
 @Data
-public class ESMemberInfo {
+public class ImgTo {
 
     @ESField(type = ESFieldType.KEYWORD)
-    private String id;
-
-    @ESField(type = ESFieldType.TEXT)
-    private String nickName;
+    private String preUrl;
 
     @ESField(type = ESFieldType.KEYWORD)
-    private String avatar;
+    private String oriUrl;
+
+    @ESField(type = ESFieldType.KEYWORD)
+    private Integer isVideo;
 }

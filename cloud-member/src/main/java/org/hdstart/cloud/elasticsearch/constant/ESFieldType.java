@@ -1,4 +1,4 @@
-package org.hdstart.cloud.constant.es;
+package org.hdstart.cloud.elasticsearch.constant;
 
 public enum ESFieldType {
     TEXT("text"),
@@ -7,6 +7,7 @@ public enum ESFieldType {
     LONG("long"),
     DOUBLE("double"),
     BOOLEAN("boolean"),
+    OBJECT("object"),
     DATE("date");
 
 

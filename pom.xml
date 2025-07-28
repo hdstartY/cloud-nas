@@ -37,14 +37,28 @@
         <nacos-version>2023.0.1.2</nacos-version>
         <fastJson-version>2.0.47</fastJson-version>
         <elasticsearch-version>8.18.3</elasticsearch-version>
+        <thumbnailator-version>0.4.8</thumbnailator-version>
+        <javacv-verssion>1.5.9</javacv-verssion>
     </properties>
 
     <dependencyManagement>
         <dependencies>
+<!--            缩略图-->
+            <dependency>
+                <groupId>net.coobird</groupId>
+                <artifactId>thumbnailator</artifactId>
+                <version>${thumbnailator-version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.bytedeco</groupId>
+                <artifactId>javacv-platform</artifactId>
+                <version>${javacv-verssion}</version>
+            </dependency>
+
             <dependency>
                 <groupId>co.elastic.clients</groupId>
                 <artifactId>elasticsearch-java</artifactId>
-                <version>${elasticsearch-version}</version> <!-- 对应你ES版本 -->
+                <version>${elasticsearch-version}</version>
             </dependency>
 
             <dependency>

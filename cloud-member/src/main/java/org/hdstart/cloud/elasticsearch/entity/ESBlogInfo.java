@@ -2,8 +2,9 @@ package org.hdstart.cloud.elasticsearch.entity;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.Data;
-import org.hdstart.cloud.constant.es.ESFieldType;
+import org.hdstart.cloud.elasticsearch.constant.ESFieldType;
 import org.hdstart.cloud.elasticsearch.annotation.ESField;
+import org.hdstart.cloud.to.ImgTo;
 
 import java.util.List;
 
@@ -26,9 +27,9 @@ public class ESBlogInfo {
     private String textContent;
 
     @ESField(type = ESFieldType.KEYWORD)
-    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private String createTime;
 
-    @ESField(type = ESFieldType.KEYWORD)
-    private List<String> images;
+    @ESField(type = ESFieldType.OBJECT,isList = true,nested = true)
+    private List<ImgTo> images;
 }

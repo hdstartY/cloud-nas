@@ -6,6 +6,9 @@ public enum FileType {
     NAS("nas"),
     BLOG("blog"),
     MSG_IMG("msg-img"),
+    PRE_IMG("pre-img"),
+    VIDEO_PRE("video_pre"),
+    VIDEO("video"),
     BACK_IMG("back-img");
 
     private String type;

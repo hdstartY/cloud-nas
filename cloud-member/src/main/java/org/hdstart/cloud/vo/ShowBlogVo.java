@@ -8,6 +8,7 @@ import java.util.List;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.ToString;
+import org.hdstart.cloud.to.ImgTo;
 
 /**
  *
@@ -26,8 +27,10 @@ public class ShowBlogVo {
     private LocalDateTime createTime;
     private Integer isPublic;
     private Integer isDeleted;
-    private List<String> images;
+    private Boolean isShowComment = false;
+    private List<ImgTo> images;
     private Integer likeNum;
     private Long commentNum = 0L;
     private List<ShowCommentVo> comments = new ArrayList<>();
+    private Boolean commentLoading = true;
 }

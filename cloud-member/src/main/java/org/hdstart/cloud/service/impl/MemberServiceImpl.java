@@ -21,6 +21,7 @@ import org.hdstart.cloud.service.MemberService;
 import org.hdstart.cloud.mapper.MemberMapper;
 import org.hdstart.cloud.utils.minio.fileType.FileType;
 import org.hdstart.cloud.utils.minio.utils.MinioUtils;
+import org.hdstart.cloud.vo.MemberVo;
 import org.hdstart.cloud.vo.PublisherInfoVo;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -203,6 +204,14 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member>
                 .toList();
 
         return Result.success(resultList);
+    }
+
+    @Override
+    public MemberVo getVoById(Integer id) {
+
+        MemberVo vo = memberMapper.getVoById(id);
+
+        return vo;
     }
 }
 

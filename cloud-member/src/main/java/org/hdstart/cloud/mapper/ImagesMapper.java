@@ -4,6 +4,7 @@ import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.hdstart.cloud.entity.Images;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import org.hdstart.cloud.to.ImgTo;
 import org.hdstart.cloud.vo.BlogImgUrlVo;
 
 import java.util.ArrayList;
@@ -18,7 +19,7 @@ import java.util.List;
 @Mapper
 public interface ImagesMapper extends BaseMapper<Images> {
 
-    List<String> selectListUrls(@Param("blogId") Integer blogId);
+    List<ImgTo> selectListUrls(@Param("blogId") Integer blogId);
 
     List<BlogImgUrlVo> listUrlBatchBlogIds(@Param("voBlogIds") List<Integer> voBlogIds);
 

@@ -11,5 +11,9 @@ public class BlogImgUrlVo {
 
     private Integer blogId;
 
-    private String imgUrl;
+    private String preUrl;
+
+    private String oriUrl;
+
+    private Integer isVideo;
 }
