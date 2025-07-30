@@ -31,7 +31,7 @@
         </foreach>
     </delete>
     <select id="selectListUrls" resultType="org.hdstart.cloud.to.ImgTo">
-        select `pre_url` as preUrl,ori_url as oriUrl
+        select `pre_url` as preUrl,ori_url as oriUrl,is_video as isVideo
         from images
         where blog_id = #{blogId}
     </select>

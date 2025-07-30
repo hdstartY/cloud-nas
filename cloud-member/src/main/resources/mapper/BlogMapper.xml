@@ -61,7 +61,7 @@
         <foreach collection="followedIds" item="id" open="(" separator="," close=")">
             #{id}
         </foreach>
-        AND b.is_deleted = 0
+        AND b.is_deleted = 0 and is_public = 1
         ORDER BY ${orderType} DESC
         LIMIT #{pageSize} OFFSET #{currentPage}
     </select>

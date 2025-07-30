@@ -31,7 +31,7 @@
         where id = #{id}
     </select>
     <select id="getVoById" resultType="org.hdstart.cloud.vo.MemberVo">
-        select id as id,nick_name as nickName,avatar as avatar
+        select id as id,avatar as avatar,nick_name as nickName,
         from member
         where id = #{id}
 
