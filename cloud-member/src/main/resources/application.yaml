@@ -27,7 +27,7 @@ spring:
   #logging:
 #  level:
 #    com.baomidou.mybatisplus: debug
-#    org.hdstart.cloud.mapper: debug # 替换为你项目中 mapper 所在的包
+#    org.hdstart.cloud.mapper: debug # mapper 所在的包
 
   servlet:
     multipart:
@@ -35,7 +35,7 @@ spring:
       max-request-size: 200MB
 minio:
   preUrl: http://122.152.237.135:9000
-  endpoint: http://122.152.237.135:9000        # MinIO 服务地址（换成你的服务器IP）
-  accessKey: minioadmin                       # 你设置的账号
-  secretKey: minioadmin                   # 你设置的密码
+  endpoint: http://122.152.237.135:9000        # MinIO 服务地址
+  accessKey: minioadmin                       # 账号
+  secretKey: minioadmin                   # 密码
   bucketName: cloud-nas
